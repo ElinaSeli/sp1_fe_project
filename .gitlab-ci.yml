@@ -1,0 +1,37 @@
+image: node:22-alpine
+
+stages:
+  - test
+  - quality
+
+# ── 1. Kontrola frontendu (Lint a TypeScript) ──────────────────────────────────
+frontend_checks:
+  stage: test
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - .pnpm-store
+  before_script:
+    - corepack enable pnpm
+    - pnpm config set store-dir .pnpm-store
+  script:
+    - pnpm install
+    - pnpm run lint
+    - pnpm run typecheck
+
+# ── 2. SonarQube (spustí se jen při Merge Requestu) ────────────────────────────
+sonarqube:
+  stage: quality
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  variables:
+    # TODO: Změnit na reálnou URL adresu vašeho SonarQubu!
+    SONAR_HOST_URL: "https://sonarcloud.io" 
+  script:
+    - sonar-scanner -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.token=$SONAR_TOKEN -Dsonar.pullrequest.key=$CI_MERGE_REQUEST_IID -Dsonar.pullrequest.branch=$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME -Dsonar.pullrequest.base=$CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  allow_failure: true 

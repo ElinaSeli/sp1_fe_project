@@ -7,8 +7,12 @@
     "dev": "nuxt dev",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
+    "prepare": "husky",
     "lint": "eslint .",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.101",
@@ -21,8 +25,21 @@
     "@nuxt/eslint": "^1.15.2",
     "@tauri-apps/cli": "^2.10.1",
     "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.5.3",
     "typescript": "^6.0.2",
     "vue-tsc": "^3.2.6"
+  },
+  "lint-staged": {
+    "*.{js,ts,vue,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
+    ]
   },
   "packageManager": "pnpm@10.33.0"
 }
