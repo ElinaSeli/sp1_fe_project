@@ -1,10 +1,16 @@
 image: node:22-alpine
 
-stages:
-  - test
-  - quality
+variables:
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+  GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
 
-# ── 1. Kontrola frontendu (Lint a TypeScript) ──────────────────────────────────
+stages:
+  # TODO: Create Redmine issue to add a build stage later
+  - test
+  - sonarqube-check
+  - sonarqube-vulnerability-report
+
+# ── 1. Frontend Checks (Lint and TypeScript) ──────────────────────────────────
 frontend_checks:
   stage: test
   cache:
@@ -17,21 +23,39 @@ frontend_checks:
     - corepack enable pnpm
     - pnpm config set store-dir .pnpm-store
   script:
-    - pnpm install
+    - pnpm install --frozen-lockfile
     - pnpm run lint
     - pnpm run typecheck
 
-# ── 2. SonarQube (spustí se jen při Merge Requestu) ────────────────────────────
-sonarqube:
-  stage: quality
+# ── 2. SonarQube ───────────────────────────────────────────────────────────────
+sonarqube-check:
+  stage: sonarqube-check
   image:
-    name: sonarsource/sonar-scanner-cli:latest
+    name: sonarsource/sonar-scanner-cli:11
     entrypoint: [""]
-  variables:
-    # TODO: Změnit na reálnou URL adresu vašeho SonarQubu!
-    SONAR_HOST_URL: "https://sonarcloud.io" 
-  script:
-    - sonar-scanner -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.token=$SONAR_TOKEN -Dsonar.pullrequest.key=$CI_MERGE_REQUEST_IID -Dsonar.pullrequest.branch=$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME -Dsonar.pullrequest.base=$CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+  script: 
+    - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}"
+  allow_failure: true
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  allow_failure: true 
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'master'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'develop'
+
+sonarqube-vulnerability-report:
+  stage: sonarqube-vulnerability-report
+  image:
+    name: sonarsource/sonar-scanner-cli:11
+    entrypoint: [""]
+  script:
+    - 'curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=SP1_seliveli&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json'
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'master'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'develop'
+  artifacts:
+    expire_in: 1 day
+    reports:
+      sast: gl-sast-sonar-report.json
