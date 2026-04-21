@@ -5,6 +5,7 @@
 .nitro
 .cache
 dist
+coverage
 
 # Node dependencies
 node_modules
@@ -32,3 +33,4 @@ target
 
 # claude
 .claude/*
+.nuxtrc
