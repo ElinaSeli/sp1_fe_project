@@ -5,12 +5,12 @@ variables:
   GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
 
 stages:
-  # TODO: Create Redmine issue to add a build stage later
   - test
+  - build
   - sonarqube-check
   - sonarqube-vulnerability-report
 
-# ── 1. Frontend Checks (Lint and TypeScript) ──────────────────────────────────
+# ── 1. Frontend Checks (Lint, TypeScript, and Tests) ──────────────────────────
 frontend_checks:
   stage: test
   cache:
@@ -26,6 +26,32 @@ frontend_checks:
     - pnpm install --frozen-lockfile
     - pnpm run lint
     - pnpm run typecheck
+    - pnpm run test:coverage
+  artifacts:
+    paths:
+      - coverage/
+    expire_in: 1 day
+
+# ── 1.5. Frontend Build ────────────────────────────────────────────────────────
+frontend_build:
+  stage: build
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - .pnpm-store
+  before_script:
+    - corepack enable pnpm
+    - pnpm config set store-dir .pnpm-store
+  script:
+    - pnpm install --frozen-lockfile
+    - pnpm run build
+  artifacts:
+    paths:
+      - .nuxt/
+      - .output/
+    expire_in: 1 day
 
 # ── 2. SonarQube ───────────────────────────────────────────────────────────────
 sonarqube-check:
