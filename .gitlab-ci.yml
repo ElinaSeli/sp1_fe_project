@@ -9,6 +9,8 @@ stages:
   - build
   - sonarqube-check
   - sonarqube-vulnerability-report
+  - dockerize
+  - deploy
 
 # ── 1. Frontend Checks (Lint, TypeScript, and Tests) ──────────────────────────
 frontend_checks:
@@ -59,7 +61,7 @@ sonarqube-check:
   image:
     name: sonarsource/sonar-scanner-cli:11
     entrypoint: [""]
-  script: 
+  script:
     - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}"
   allow_failure: true
   rules:
@@ -85,3 +87,43 @@ sonarqube-vulnerability-report:
     expire_in: 1 day
     reports:
       sast: gl-sast-sonar-report.json
+
+# ── 3. Frontend dockerize ────────────────
+dockerize_frontend:
+  stage: dockerize
+  image:
+    name: gcr.io/kaniko-project/executor:v1.22.0-debug
+    entrypoint: [""]
+  dependencies:
+    - frontend_build
+  script:
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA}"
+      --destination "${CI_REGISTRY_IMAGE}/frontend:latest"
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'develop'
+
+# ── 4. Frontend deploy na AWS ───────────────
+deploy_frontend_aws:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - chmod 400 ~/.ssh/id_rsa || true
+  script:
+    - >
+      ssh -o StrictHostKeyChecking=no $SSH_USER@$SERVER_IP "
+      docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+      docker pull ${CI_REGISTRY_IMAGE}/frontend:latest &&
+      docker stop frontend-app || true &&
+      docker rm frontend-app || true &&
+      docker run -d --name frontend-app -p 3000:3000 --env-file /home/ubuntu/.env.frontend ${CI_REGISTRY_IMAGE}/frontend:latest &&
+      docker image prune -a -f --filter \"until=24h\"
+      "
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'develop'
