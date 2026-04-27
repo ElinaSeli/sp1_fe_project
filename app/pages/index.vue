@@ -5,6 +5,8 @@ definePageMeta({
 
 const timerStore = useTimerStore()
 
+onMounted(() => timerStore.fetchEntries())
+
 const formatDuration = (seconds: number) => {
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)

@@ -27,29 +27,15 @@ export const useTimerStore = defineStore(
         duration: number
         createdAt: string
       }>
-    >([
-      {
-        id: '1',
-        description: 'Design System Overhaul',
-        projectId: '1',
-        duration: 7200,
-        createdAt: '2026-04-27T10:00:00Z'
-      },
-      {
-        id: '2',
-        description: 'Fixing Sidebar bugs',
-        projectId: '1',
-        duration: 3600,
-        createdAt: '2026-04-27T11:00:00Z'
-      },
-      {
-        id: '3',
-        description: 'Client Meeting',
-        projectId: '2',
-        duration: 1800,
-        createdAt: '2026-04-26T14:00:00Z'
-      }
-    ])
+    >([])
+
+    async function fetchEntries() {
+      const workspacesStore = useWorkspacesStore()
+      if (!workspacesStore.activeWorkspaceId) return
+
+      const response = await timerService.getEntries(workspacesStore.activeWorkspaceId)
+      if (response.data) entries.value = response.data
+    }
 
     async function fetchActiveTimer() {
       const workspacesStore = useWorkspacesStore()
@@ -122,6 +108,18 @@ export const useTimerStore = defineStore(
       try {
         const response = await timerService.stop(workspacesStore.activeWorkspaceId)
         if (response.data) {
+          const entry = response.data
+          entries.value.unshift({
+            id: entry.id,
+            description: entry.description || '',
+            projectId: entry.projectId,
+            duration: entry.timeEnd
+              ? Math.floor(
+                  (new Date(entry.timeEnd).getTime() - new Date(entry.timeStart).getTime()) / 1000
+                )
+              : 0,
+            createdAt: entry.timeStart
+          })
           isRunning.value = false
           startTimestamp.value = null
           activeEntryId.value = null
@@ -177,6 +175,7 @@ export const useTimerStore = defineStore(
       startTimestamp,
       draftEntry,
       entries,
+      fetchEntries,
       fetchActiveTimer,
       startTimer,
       stopTimer,

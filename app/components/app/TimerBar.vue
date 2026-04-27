@@ -1,5 +1,7 @@
 <script setup lang="ts">
 const timerStore = useTimerStore()
+const workspacesStore = useWorkspacesStore()
+
 const description = computed({
   get: () => timerStore.draftEntry.description,
   set: (v) => {
@@ -10,12 +12,6 @@ const selectedProjectId = computed({
   get: () => timerStore.draftEntry.projectId || undefined,
   set: (v) => {
     timerStore.draftEntry.projectId = v || null
-  }
-})
-const selectedTaskId = computed({
-  get: () => timerStore.draftEntry.taskId || undefined,
-  set: (v) => {
-    timerStore.draftEntry.taskId = v || null
   }
 })
 const selectedTag = computed({
@@ -33,20 +29,17 @@ const timerBarFocused = ref(false)
 const descriptionInput = ref<HTMLInputElement | null>(null)
 const startButton = ref<{ $el?: HTMLElement; focus?: () => void } | null>(null)
 
-// Mock data for selectors
-const projects = [
-  { id: '1', label: 'Internal', color: 'emerald' },
-  { id: '2', label: 'Client A', color: 'blue' },
-  { id: '3', label: 'Open Source', color: 'purple' }
-]
+const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
 
-const tasks = [
-  { id: '1', label: 'Development', projectId: '1' },
-  { id: '2', label: 'Design', projectId: '1' },
-  { id: '3', label: 'Meeting', projectId: '2' }
-]
+const { data: projects } = useFetch<{ id: string; name: string; color: string }[]>(
+  () => `/api-proxy/api/workspaces/${workspaceId.value}/projects`,
+  { watch: [workspaceId], default: () => [] }
+)
 
-const tags = ['Engineering', 'Urgent', 'Research', 'UI/UX']
+const { data: tags } = useFetch<string[]>(
+  () => `/api-proxy/api/workspaces/${workspaceId.value}/tags`,
+  { watch: [workspaceId], default: () => [] }
+)
 
 const formatDuration = (seconds: number) => {
   const h = Math.floor(seconds / 3600)
@@ -152,8 +145,9 @@ onUnmounted(() => {
       <div class="flex-shrink min-w-0 hidden lg:flex items-center space-x-2">
         <USelectMenu
           v-model="selectedProjectId"
-          :items="projects"
+          :items="projects ?? []"
           value-key="id"
+          label-key="name"
           placeholder="Project"
           size="xs"
         >
@@ -162,31 +156,13 @@ onUnmounted(() => {
               variant="ghost"
               color="neutral"
               icon="i-lucide-folder"
-              :label="projects.find((p) => p.id === selectedProjectId)?.label || 'Project'"
+              :label="projects?.find((p) => p.id === selectedProjectId)?.name || 'Project'"
               class="max-w-[120px] truncate"
             />
           </template>
         </USelectMenu>
 
-        <USelectMenu
-          v-model="selectedTaskId"
-          :items="tasks.filter((t) => !selectedProjectId || t.projectId === selectedProjectId)"
-          value-key="id"
-          placeholder="Task"
-          size="xs"
-        >
-          <template #default>
-            <UButton
-              variant="ghost"
-              color="neutral"
-              icon="i-lucide-check-square"
-              :label="tasks.find((t) => t.id === selectedTaskId)?.label || 'Task'"
-              class="max-w-[120px] truncate"
-            />
-          </template>
-        </USelectMenu>
-
-        <USelectMenu v-model="selectedTag" :items="tags" placeholder="Tags" size="xs">
+        <USelectMenu v-model="selectedTag" :items="tags ?? []" placeholder="Tags" size="xs">
           <template #default>
             <UButton
               variant="ghost"

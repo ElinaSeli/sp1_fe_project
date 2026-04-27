@@ -25,18 +25,11 @@ export const authService = {
       })
       return { data, error: null }
     } catch (err: unknown) {
-      console.warn('Login API failed, falling back to mock data:', err)
-      // Mock Fallback
-      return {
-        data: {
-          access_token: 'mock-jwt-token-12345',
-          expires_in: 3600,
-          token_type: 'Bearer',
-          username: credentials.username,
-          roles: ['ROLE_USER']
-        },
-        error: null
-      }
+      const message =
+        (err as { data?: { message?: string }; message?: string })?.data?.message ??
+        (err as { message?: string })?.message ??
+        'An unexpected error occurred'
+      return { data: null, error: message }
     }
   },
 
@@ -45,25 +38,10 @@ export const authService = {
    */
   async register(payload: RegisterRequest): Promise<ServiceResponse<AuthUser>> {
     const { request } = useApiClient()
-    const res = await request<AuthUser>('/api/users/register', {
+    return request<AuthUser>('/api/users/register', {
       method: 'POST',
       body: payload
     })
-
-    if (res.error) {
-      console.warn('Register API failed, falling back to mock data:', res.error)
-      return {
-        data: {
-          id: 'mock-user-1',
-          username: payload.username,
-          email: payload.email,
-          firstName: 'Mock',
-          lastName: 'User'
-        },
-        error: null
-      }
-    }
-    return res
   },
 
   /**
@@ -71,21 +49,6 @@ export const authService = {
    */
   async me(): Promise<ServiceResponse<AuthUser>> {
     const { request } = useApiClient()
-    const res = await request<AuthUser>('/api/users/me')
-
-    if (res.error) {
-      console.warn('Fetch Profile API failed, falling back to mock data:', res.error)
-      return {
-        data: {
-          id: 'mock-user-1',
-          username: 'demo_user',
-          email: 'demo@example.com',
-          firstName: 'Demo',
-          lastName: 'User'
-        },
-        error: null
-      }
-    }
-    return res
+    return request<AuthUser>('/api/users/me')
   }
 }

@@ -9,7 +9,10 @@ import {
   MOCK_CREDENTIALS,
   MOCK_AUTH_RESPONSE,
   MOCK_USER,
-  MOCK_WORKSPACES
+  MOCK_WORKSPACES,
+  MOCK_PROJECTS,
+  MOCK_TAGS,
+  MOCK_TIME_ENTRIES
 } from '../utils/mockData'
 
 function isValidToken(event: Parameters<typeof getHeader>[0]) {
@@ -17,11 +20,24 @@ function isValidToken(event: Parameters<typeof getHeader>[0]) {
   return auth?.startsWith('Bearer ') && auth.slice(7) === MOCK_TOKEN
 }
 
+// In-memory timer state — resets on server restart.
+let activeTimer: {
+  id: string
+  description: string | null
+  projectId: string | null
+  issueId: string | null
+  tagIds: string[]
+  timeStart: string
+  timeEnd: string | null
+  timeEntryState: string
+  syncState: string
+} | null = null
+
 export default defineEventHandler(async (event) => {
   if (!event.path.startsWith('/api-proxy/')) return
 
   const method = event.method
-  const path = event.path.slice('/api-proxy'.length).split('?')[0]
+  const path = event.path.slice('/api-proxy'.length).split('?')[0]!
 
   // POST /login
   if (path === '/login' && method === 'POST') {
@@ -69,6 +85,94 @@ export default defineEventHandler(async (event) => {
       return { message: 'Unauthorized' }
     }
     return MOCK_WORKSPACES
+  }
+
+  // GET /api/workspaces/:id/projects
+  if (path.match(/^\/api\/workspaces\/[^/]+\/projects$/) && method === 'GET') {
+    if (!isValidToken(event)) {
+      setResponseStatus(event, 401)
+      return { message: 'Unauthorized' }
+    }
+    return MOCK_PROJECTS
+  }
+
+  // GET /api/workspaces/:id/tags
+  if (path.match(/^\/api\/workspaces\/[^/]+\/tags$/) && method === 'GET') {
+    if (!isValidToken(event)) {
+      setResponseStatus(event, 401)
+      return { message: 'Unauthorized' }
+    }
+    return MOCK_TAGS
+  }
+
+  // GET /api/workspaces/:id/entries
+  if (path.match(/^\/api\/workspaces\/[^/]+\/entries$/) && method === 'GET') {
+    if (!isValidToken(event)) {
+      setResponseStatus(event, 401)
+      return { message: 'Unauthorized' }
+    }
+    return MOCK_TIME_ENTRIES
+  }
+
+  // Timer routes: /api/workspaces/:workspaceId/timer[/start|/stop]
+  const timerBase = path.match(/^\/api\/workspaces\/[^/]+\/timer(\/start|\/stop)?$/)
+  if (timerBase) {
+    if (!isValidToken(event)) {
+      setResponseStatus(event, 401)
+      return { message: 'Unauthorized' }
+    }
+
+    const sub = timerBase[1]
+
+    // GET /api/workspaces/:id/timer — fetch active timer
+    if (!sub && method === 'GET') {
+      if (!activeTimer) {
+        setResponseStatus(event, 204)
+        return null
+      }
+      return activeTimer
+    }
+
+    // POST /api/workspaces/:id/timer/start
+    if (sub === '/start' && method === 'POST') {
+      if (activeTimer) {
+        setResponseStatus(event, 409)
+        return { message: 'Timer already running' }
+      }
+      const body = await readBody<{
+        description?: string
+        projectId?: string
+        taskId?: string
+        tagIds?: string[]
+      }>(event)
+      activeTimer = {
+        id: 'mock-timer-' + Date.now(),
+        description: body.description || null,
+        projectId: body.projectId || null,
+        issueId: body.taskId || null,
+        tagIds: body.tagIds || [],
+        timeStart: new Date().toISOString(),
+        timeEnd: null,
+        timeEntryState: 'RUNNING',
+        syncState: 'LOCAL_ONLY'
+      }
+      return activeTimer
+    }
+
+    // POST /api/workspaces/:id/timer/stop
+    if (sub === '/stop' && method === 'POST') {
+      if (!activeTimer) {
+        setResponseStatus(event, 404)
+        return { message: 'No active timer' }
+      }
+      const stopped = {
+        ...activeTimer,
+        timeEnd: new Date().toISOString(),
+        timeEntryState: 'VALIDATED'
+      }
+      activeTimer = null
+      return stopped
+    }
   }
 
   // Path not mocked yet
