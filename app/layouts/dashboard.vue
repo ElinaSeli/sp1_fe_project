@@ -15,7 +15,7 @@ const links = [
 ]
 
 const selectedWorkspaceId = computed({
-  get: () => workspacesStore.activeWorkspaceId,
+  get: () => workspacesStore.activeWorkspaceId || undefined,
   set: (id) => {
     if (id) workspacesStore.setActiveWorkspace(id)
   }
@@ -81,7 +81,13 @@ const userMenuItems = computed(() => [
         <div class="flex items-center gap-4">
           <USelectMenu
             v-model="selectedWorkspaceId"
-            :items="workspacesStore.workspaces"
+            :items="
+              workspacesStore.workspaces.map((w) => ({
+                ...w,
+                label: w.name,
+                description: w.description || undefined
+              }))
+            "
             value-key="id"
             label-key="name"
             class="w-48"

@@ -136,7 +136,7 @@ async function onRegister() {
       <UAlert
         v-if="errorMsg"
         icon="i-lucide-alert-circle"
-        color="red"
+        color="error"
         variant="soft"
         :description="errorMsg"
       />
