@@ -119,7 +119,7 @@ deploy_frontend_aws:
     - chmod 400 ~/.ssh/id_rsa
     - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
   script:
-    - echo "$CI_REGISTRY_PASSWORD" | ssh i ~/.ssh/id_rsa $SSH_USER@$SERVER_IP "docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY"
+    - echo "$CI_REGISTRY_PASSWORD" | ssh -i ~/.ssh/id_rsa $SSH_USER@$SERVER_IP "docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY"
     - >
       ssh -i ~/.ssh/id_rsa $SSH_USER@$SERVER_IP "
       docker pull ${CI_REGISTRY_IMAGE}/frontend:latest &&
