@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
       setResponseStatus(event, 422)
       return { message: `Missing fields: ${missing.join(', ')}` }
     }
-    if (body.password.length < 8) {
+    if ((body.password?.length || 0) < 8) {
       setResponseStatus(event, 422)
       return { message: 'Password must be at least 8 characters' }
     }
