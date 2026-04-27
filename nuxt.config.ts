@@ -1,9 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: [
-    '@nuxt/eslint',
-    '@nuxt/ui'
-  ],
+  modules: ['@nuxt/eslint', '@nuxt/ui', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
+
+  // Run as SPA. required for Tauri desktop target.
+  ssr: false,
 
   devtools: {
     enabled: true
@@ -11,11 +11,34 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  routeRules: {
-    '/': { prerender: true }
+  colorMode: {
+    preference: 'light'
+  },
+
+  // Backend base URL is injected via NUXT_PUBLIC_API_BASE_URL env variable.
+  // NEVER hardcode the IP here — use .env.local or CI/CD secrets instead.
+  runtimeConfig: {
+    public: {
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || ''
+    }
   },
 
   compatibilityDate: '2025-01-15',
+
+  // [MOCK MODE] No proxy — server/middleware/01.mockApi.ts intercepts /api-proxy/*.
+  // When real BE is ready: delete server/, uncomment the vite proxy below.
+  //
+  // vite: {
+  //   server: {
+  //     proxy: {
+  //       '/api-proxy': {
+  //         target: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://3.122.251.179:8080',
+  //         changeOrigin: true,
+  //         rewrite: (path: string) => path.replace(/^\/api-proxy/, '')
+  //       }
+  //     }
+  //   }
+  // },
 
   eslint: {
     config: {
