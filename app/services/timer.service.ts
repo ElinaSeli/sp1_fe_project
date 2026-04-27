@@ -4,7 +4,7 @@ import type { ServiceResponse, TimeEntry } from '~/types'
 export const timerService = {
   async start(
     workspaceId: string,
-    payload: { description: string; projectId: string; taskId?: string; tagIds?: string[] }
+    payload: { description: string; projectId: string | null; taskId?: string; tagIds?: string[] }
   ): Promise<ServiceResponse<TimeEntry>> {
     const { request } = useApiClient()
     return request<TimeEntry>(`/api/workspaces/${workspaceId}/timer/start`, {

@@ -55,21 +55,33 @@ export const MOCK_TIME_ENTRIES = [
     id: '00000000-0000-0000-0000-000000000030',
     description: 'Design System Overhaul',
     projectId: '00000000-0000-0000-0000-000000000020',
-    duration: 7200,
-    createdAt: '2026-04-27T10:00:00Z'
+    issueId: null,
+    timeStart: '2026-04-27T10:00:00Z',
+    timeEnd: '2026-04-27T12:00:00Z',
+    timeEntryState: 'VALIDATED',
+    syncState: 'SYNCED',
+    tagIds: []
   },
   {
     id: '00000000-0000-0000-0000-000000000031',
     description: 'Fixing Sidebar bugs',
     projectId: '00000000-0000-0000-0000-000000000020',
-    duration: 3600,
-    createdAt: '2026-04-27T11:00:00Z'
+    issueId: null,
+    timeStart: '2026-04-27T11:00:00Z',
+    timeEnd: '2026-04-27T12:00:00Z',
+    timeEntryState: 'VALIDATED',
+    syncState: 'SYNCED',
+    tagIds: []
   },
   {
     id: '00000000-0000-0000-0000-000000000032',
     description: 'Client Meeting',
     projectId: '00000000-0000-0000-0000-000000000021',
-    duration: 1800,
-    createdAt: '2026-04-26T14:00:00Z'
+    issueId: null,
+    timeStart: '2026-04-26T14:00:00Z',
+    timeEnd: '2026-04-26T14:30:00Z',
+    timeEntryState: 'VALIDATED',
+    syncState: 'SYNCED',
+    tagIds: []
   }
 ]

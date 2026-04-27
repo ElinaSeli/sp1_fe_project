@@ -27,7 +27,7 @@ const groupedEntries = computed(() => {
     {}
 
   timerStore.entries.forEach((entry) => {
-    const dateKey = entry.createdAt?.split('T')[0] || 'Unknown'
+    const dateKey = entry.timeStart.split('T')[0]!
     if (!groups[dateKey]) {
       groups[dateKey] = { date: dateKey, items: [], total: 0 }
     }
