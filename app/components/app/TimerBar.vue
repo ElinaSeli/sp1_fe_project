@@ -84,10 +84,6 @@ const onKeydown = (e: KeyboardEvent) => {
 }
 
 const startTracking = async () => {
-  if (!selectedProjectId.value) {
-    alert('Please select a project first')
-    return
-  }
   try {
     await timerStore.startTimer()
   } catch (e: unknown) {
@@ -150,28 +146,26 @@ onUnmounted(() => {
         ref="descriptionInput"
         v-model="description"
         placeholder="What are you working on? (Alt+T or /)"
-        class="flex-1 min-w-[80px] bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 h-9 truncate"
+        class="flex-1 min-w-[150px] bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 h-9 truncate"
       />
 
-      <div class="flex items-center gap-1 shrink-0 ml-2 overflow-x-auto scrollbar-hide">
+      <div class="flex-shrink min-w-0 hidden lg:flex items-center space-x-2">
         <USelectMenu
           v-model="selectedProjectId"
           :items="projects"
           value-key="id"
           placeholder="Project"
           size="xs"
-          class="min-w-[120px]"
         >
           <template #default="{ open }">
-            <button
-              class="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors text-xs text-gray-600 dark:text-gray-300 w-full outline-none focus:ring-2 focus:ring-emerald-500/50"
+            <UButton
+              variant="ghost"
+              color="gray"
+              icon="i-lucide-folder"
+              :label="projects.find((p) => p.id === selectedProjectId)?.label || 'Project'"
+              class="max-w-[120px] truncate"
               @click="open"
-            >
-              <UIcon name="i-lucide-folder" class="text-gray-500 shrink-0" />
-              <span class="truncate">{{
-                projects.find((p) => p.id === selectedProjectId)?.label || 'Project'
-              }}</span>
-            </button>
+            />
           </template>
         </USelectMenu>
 
@@ -181,40 +175,29 @@ onUnmounted(() => {
           value-key="id"
           placeholder="Task"
           size="xs"
-          class="min-w-[120px] hidden md:block"
         >
           <template #default="{ open }">
-            <button
-              class="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors text-xs text-gray-600 dark:text-gray-300 w-full outline-none focus:ring-2 focus:ring-emerald-500/50"
+            <UButton
+              variant="ghost"
+              color="gray"
+              icon="i-lucide-check-square"
+              :label="tasks.find((t) => t.id === selectedTaskId)?.label || 'Task'"
+              class="max-w-[120px] truncate"
               @click="open"
-            >
-              <UIcon name="i-lucide-check-square" class="text-gray-500 shrink-0" />
-              <span class="truncate">{{
-                tasks.find((t) => t.id === selectedTaskId)?.label || 'Task'
-              }}</span>
-            </button>
+            />
           </template>
         </USelectMenu>
 
-        <USelectMenu
-          v-model="selectedTags"
-          :items="tags"
-          multiple
-          placeholder="Tags"
-          size="xs"
-          class="min-w-[100px] hidden md:block"
-        >
+        <USelectMenu v-model="selectedTags" :items="tags" placeholder="Tags" size="xs">
           <template #default="{ open }">
-            <button
-              class="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors text-xs text-gray-600 dark:text-gray-300 w-full outline-none focus:ring-2 focus:ring-emerald-500/50"
+            <UButton
+              variant="ghost"
+              color="gray"
+              icon="i-lucide-tag"
+              :label="selectedTags.length ? selectedTags.join(', ') : 'Tags'"
+              class="max-w-[120px] truncate"
               @click="open"
-              @keydown.tab.exact.prevent="startButton?.$el?.focus() || startButton?.focus()"
-            >
-              <UIcon name="i-lucide-tag" class="text-gray-500 shrink-0" />
-              <span class="truncate">{{
-                selectedTags.length ? selectedTags.join(', ') : 'Tags'
-              }}</span>
-            </button>
+            />
           </template>
         </USelectMenu>
       </div>
