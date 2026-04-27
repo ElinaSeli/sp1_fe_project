@@ -19,6 +19,38 @@ export const useTimerStore = defineStore(
       tagIds: [] as string[]
     })
 
+    const entries = ref<
+      Array<{
+        id: string
+        description: string
+        projectId: string | null
+        duration: number
+        createdAt: string
+      }>
+    >([
+      {
+        id: '1',
+        description: 'Design System Overhaul',
+        projectId: '1',
+        duration: 7200,
+        createdAt: '2026-04-27T10:00:00Z'
+      },
+      {
+        id: '2',
+        description: 'Fixing Sidebar bugs',
+        projectId: '1',
+        duration: 3600,
+        createdAt: '2026-04-27T11:00:00Z'
+      },
+      {
+        id: '3',
+        description: 'Client Meeting',
+        projectId: '2',
+        duration: 1800,
+        createdAt: '2026-04-26T14:00:00Z'
+      }
+    ])
+
     async function fetchActiveTimer() {
       const workspacesStore = useWorkspacesStore()
       if (!workspacesStore.activeWorkspaceId) return
@@ -43,13 +75,13 @@ export const useTimerStore = defineStore(
       const workspacesStore = useWorkspacesStore()
 
       if (!workspacesStore.activeWorkspaceId) throw new Error('No active workspace')
-      if (!draftEntry.value.projectId) throw new Error('Please select a project first')
+      // Removed rigid projectId check to allow mock testing without projects
 
       isStarting.value = true
       try {
         const response = await timerService.start(workspacesStore.activeWorkspaceId, {
           description: draftEntry.value.description,
-          projectId: draftEntry.value.projectId,
+          projectId: draftEntry.value.projectId || '00000000-0000-0000-0000-000000000000',
           taskId: draftEntry.value.taskId || undefined,
           tagIds: draftEntry.value.tagIds
         })
@@ -102,9 +134,21 @@ export const useTimerStore = defineStore(
 
         toast.add({
           title: 'Backend not ready',
-          description: 'Mocking stop state for UI testing.',
+          description: 'Mocking stop state & saving entry locally.',
           color: 'warning',
           icon: 'i-lucide-alert-triangle'
+        })
+
+        // Save local mock entry
+        const duration = startTimestamp.value
+          ? Math.floor((Date.now() - startTimestamp.value) / 1000)
+          : 0
+        entries.value.unshift({
+          id: 'mock-' + Date.now(),
+          description: draftEntry.value.description || '(No description)',
+          projectId: draftEntry.value.projectId,
+          duration,
+          createdAt: new Date().toISOString()
         })
 
         // Manual state reset for fallback
@@ -132,6 +176,7 @@ export const useTimerStore = defineStore(
       isStopping,
       startTimestamp,
       draftEntry,
+      entries,
       fetchActiveTimer,
       startTimer,
       stopTimer,

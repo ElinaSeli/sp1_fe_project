@@ -3,37 +3,7 @@ definePageMeta({
   layout: 'dashboard'
 })
 
-// Mock entries
-const entries = [
-  {
-    id: '1',
-    description: 'Design System Overhaul',
-    project: 'Internal',
-    duration: 7200,
-    createdAt: '2026-04-27T10:00:00Z'
-  },
-  {
-    id: '2',
-    description: 'Fixing Sidebar bugs',
-    project: 'Internal',
-    duration: 3600,
-    createdAt: '2026-04-27T11:00:00Z'
-  },
-  {
-    id: '3',
-    description: 'Client Meeting',
-    project: 'Client A',
-    duration: 1800,
-    createdAt: '2026-04-26T14:00:00Z'
-  },
-  {
-    id: '4',
-    description: 'CI/CD Pipeline Fix',
-    project: 'Open Source',
-    duration: 5400,
-    createdAt: '2026-04-26T09:00:00Z'
-  }
-]
+const timerStore = useTimerStore()
 
 const formatDuration = (seconds: number) => {
   const h = Math.floor(seconds / 3600)
@@ -51,9 +21,10 @@ const formatDate = (dateStr: string) => {
 
 // Group entries by date
 const groupedEntries = computed(() => {
-  const groups: Record<string, { date: string; items: typeof entries; total: number }> = {}
+  const groups: Record<string, { date: string; items: typeof timerStore.entries; total: number }> =
+    {}
 
-  entries.forEach((entry) => {
+  timerStore.entries.forEach((entry) => {
     const dateKey = entry.createdAt.split('T')[0]
     if (!groups[dateKey]) {
       groups[dateKey] = { date: dateKey, items: [], total: 0 }

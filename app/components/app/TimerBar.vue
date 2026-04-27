@@ -31,6 +31,7 @@ const isStopping = computed(() => timerStore.isStopping)
 const elapsedSeconds = ref(0)
 const timerBarFocused = ref(false)
 const descriptionInput = ref<HTMLInputElement | null>(null)
+const startButton = ref<{ $el?: HTMLElement; focus?: () => void } | null>(null)
 
 // Mock data for selectors
 const projects = [
@@ -180,7 +181,7 @@ onUnmounted(() => {
           value-key="id"
           placeholder="Task"
           size="xs"
-          class="min-w-[120px]"
+          class="min-w-[120px] hidden md:block"
         >
           <template #default="{ open }">
             <button
@@ -201,12 +202,13 @@ onUnmounted(() => {
           multiple
           placeholder="Tags"
           size="xs"
-          class="min-w-[100px]"
+          class="min-w-[100px] hidden md:block"
         >
           <template #default="{ open }">
             <button
               class="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors text-xs text-gray-600 dark:text-gray-300 w-full outline-none focus:ring-2 focus:ring-emerald-500/50"
               @click="open"
+              @keydown.tab.exact.prevent="startButton?.$el?.focus() || startButton?.focus()"
             >
               <UIcon name="i-lucide-tag" class="text-gray-500 shrink-0" />
               <span class="truncate">{{
@@ -219,17 +221,20 @@ onUnmounted(() => {
     </div>
 
     <!-- Right: Controls -->
-    <div class="flex items-center gap-6 shrink-0">
-      <div class="text-2xl font-mono font-medium tracking-wider text-emerald-500 w-32 text-right">
+    <div class="flex items-center gap-2 sm:gap-6 shrink-0">
+      <div
+        class="text-xl sm:text-2xl font-mono font-medium tracking-wider text-emerald-500 w-20 sm:w-32 text-right"
+      >
         {{ formatDuration(elapsedSeconds) }}
       </div>
 
       <UButton
+        ref="startButton"
         :icon="isRunning ? 'i-lucide-square' : 'i-lucide-play'"
         :color="isRunning ? 'error' : 'emerald'"
         :loading="isStarting || isStopping"
         size="md"
-        class="min-w-[100px] justify-center font-bold shadow-lg"
+        class="min-w-[80px] sm:min-w-[100px] justify-center font-bold shadow-lg"
         @click="isRunning ? stopTracking() : startTracking()"
       >
         {{ isRunning ? 'STOP' : 'START' }}
