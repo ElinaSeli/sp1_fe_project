@@ -26,6 +26,7 @@ const selectedTags = computed({
 })
 
 const isRunning = computed(() => timerStore.isRunning)
+const isStarting = computed(() => timerStore.isStarting)
 const isStopping = computed(() => timerStore.isStopping)
 const elapsedSeconds = ref(0)
 const timerBarFocused = ref(false)
