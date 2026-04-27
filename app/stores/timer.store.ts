@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { timerService } from '~/services/timer.service'
+import type { TimeEntryViewModel } from '~/types'
 
 export const useTimerStore = defineStore(
   'timer',
@@ -17,15 +18,7 @@ export const useTimerStore = defineStore(
       tagIds: [] as string[]
     })
 
-    const entries = ref<
-      Array<{
-        id: string
-        description: string
-        projectId: string | null
-        duration: number
-        timeStart: string
-      }>
-    >([])
+    const entries = ref<TimeEntryViewModel[]>([])
 
     async function fetchEntries() {
       const workspacesStore = useWorkspacesStore()
@@ -117,7 +110,7 @@ export const useTimerStore = defineStore(
           activeEntryId.value = null
           resetDraft()
         } else if (response.error) {
-          throw response.error
+          throw new Error(response.error)
         }
       } finally {
         isStopping.value = false

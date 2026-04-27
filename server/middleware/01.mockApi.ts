@@ -11,6 +11,7 @@ import {
   MOCK_USER,
   MOCK_WORKSPACES,
   MOCK_PROJECTS,
+  MOCK_TASKS,
   MOCK_TAGS,
   MOCK_TIME_ENTRIES
 } from '../utils/mockData'
@@ -94,6 +95,15 @@ export default defineEventHandler(async (event) => {
       return { message: 'Unauthorized' }
     }
     return MOCK_PROJECTS
+  }
+
+  // GET /api/workspaces/:id/tasks
+  if (path.match(/^\/api\/workspaces\/[^/]+\/tasks$/) && method === 'GET') {
+    if (!isValidToken(event)) {
+      setResponseStatus(event, 401)
+      return { message: 'Unauthorized' }
+    }
+    return MOCK_TASKS
   }
 
   // GET /api/workspaces/:id/tags

@@ -14,6 +14,12 @@ const selectedProjectId = computed({
     timerStore.draftEntry.projectId = v || null
   }
 })
+const selectedTaskId = computed({
+  get: () => timerStore.draftEntry.taskId || undefined,
+  set: (v) => {
+    timerStore.draftEntry.taskId = v || null
+  }
+})
 const selectedTag = computed({
   get: () => timerStore.draftEntry.tagIds[0] || '',
   set: (v: string) => {
@@ -25,20 +31,44 @@ const isRunning = computed(() => timerStore.isRunning)
 const isStarting = computed(() => timerStore.isStarting)
 const isStopping = computed(() => timerStore.isStopping)
 const elapsedSeconds = ref(0)
+const toast = useToast()
 const timerBarFocused = ref(false)
 const descriptionInput = ref<HTMLInputElement | null>(null)
 const startButton = ref<{ $el?: HTMLElement; focus?: () => void } | null>(null)
 
 const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
 
-const { data: projects } = useFetch<{ id: string; name: string; color: string }[]>(
-  () => `/api-proxy/api/workspaces/${workspaceId.value}/projects`,
-  { watch: [workspaceId], default: () => [] }
+const { data: projects, execute: fetchProjects } = useFetch<
+  { id: string; name: string; color: string }[]
+>(() => `/api-proxy/api/workspaces/${workspaceId.value}/projects`, {
+  immediate: false,
+  watch: false,
+  default: () => []
+})
+
+const { data: tasks, execute: fetchTasks } = useFetch<
+  { id: string; name: string; projectId: string }[]
+>(() => `/api-proxy/api/workspaces/${workspaceId.value}/tasks`, {
+  immediate: false,
+  watch: false,
+  default: () => []
+})
+
+const { data: tags, execute: fetchTags } = useFetch<string[]>(
+  () => `/api-proxy/api/workspaces/${workspaceId.value}/tags`,
+  { immediate: false, watch: false, default: () => [] }
 )
 
-const { data: tags } = useFetch<string[]>(
-  () => `/api-proxy/api/workspaces/${workspaceId.value}/tags`,
-  { watch: [workspaceId], default: () => [] }
+watch(
+  workspaceId,
+  (id) => {
+    if (id) {
+      fetchProjects()
+      fetchTasks()
+      fetchTags()
+    }
+  },
+  { immediate: true }
 )
 
 const formatDuration = (seconds: number) => {
@@ -80,7 +110,12 @@ const startTracking = async () => {
   try {
     await timerStore.startTimer()
   } catch (e: unknown) {
-    console.error('Failed to start timer:', e)
+    toast.add({
+      title: 'Failed to start timer',
+      description: e instanceof Error ? e.message : 'Unexpected error',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
   }
 }
 
@@ -88,7 +123,12 @@ const stopTracking = async () => {
   try {
     await timerStore.stopTimer()
   } catch (e: unknown) {
-    console.error('Failed to stop timer:', e)
+    toast.add({
+      title: 'Failed to stop timer',
+      description: e instanceof Error ? e.message : 'Unexpected error',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
   }
 }
 
@@ -157,6 +197,27 @@ onUnmounted(() => {
               color="neutral"
               icon="i-lucide-folder"
               :label="projects?.find((p) => p.id === selectedProjectId)?.name || 'Project'"
+              class="max-w-[120px] truncate"
+            />
+          </template>
+        </USelectMenu>
+
+        <USelectMenu
+          v-model="selectedTaskId"
+          :items="
+            (tasks ?? []).filter((t) => !selectedProjectId || t.projectId === selectedProjectId)
+          "
+          value-key="id"
+          label-key="name"
+          placeholder="Task"
+          size="xs"
+        >
+          <template #default>
+            <UButton
+              variant="ghost"
+              color="neutral"
+              icon="i-lucide-check-square"
+              :label="tasks?.find((t) => t.id === selectedTaskId)?.name || 'Task'"
               class="max-w-[120px] truncate"
             />
           </template>

@@ -48,6 +48,34 @@ export const MOCK_PROJECTS = [
   { id: '00000000-0000-0000-0000-000000000022', name: 'Open Source', color: 'purple' }
 ]
 
+export const MOCK_TASKS = [
+  {
+    id: '00000000-0000-0000-0000-000000000040',
+    name: 'Development',
+    projectId: '00000000-0000-0000-0000-000000000020'
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000041',
+    name: 'Design',
+    projectId: '00000000-0000-0000-0000-000000000020'
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000042',
+    name: 'Code Review',
+    projectId: '00000000-0000-0000-0000-000000000020'
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000043',
+    name: 'Meeting',
+    projectId: '00000000-0000-0000-0000-000000000021'
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000044',
+    name: 'Bug Fix',
+    projectId: '00000000-0000-0000-0000-000000000022'
+  }
+]
+
 export const MOCK_TAGS = ['Engineering', 'Urgent', 'Research', 'UI/UX']
 
 export const MOCK_TIME_ENTRIES = [

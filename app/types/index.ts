@@ -73,6 +73,12 @@ export interface Project {
   color?: string
 }
 
+export interface Task {
+  id: string
+  name: string
+  projectId: string
+}
+
 export interface Tag {
   id: string
   name: string
@@ -164,4 +170,16 @@ export interface KeybindingAction {
 export interface ServiceResponse<T> {
   data: T | null
   error: string | null
+}
+
+// ---------------------------------------------------------------------------
+// View models
+// ---------------------------------------------------------------------------
+
+export interface TimeEntryViewModel {
+  id: string
+  description: string
+  projectId: string | null
+  duration: number
+  timeStart: string
 }
