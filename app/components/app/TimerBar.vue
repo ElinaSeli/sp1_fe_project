@@ -135,7 +135,7 @@ onUnmounted(() => {
 
     <!-- Middle: Input Bar (Keyboard First) -->
     <div
-      class="flex-1 max-w-5xl flex items-center gap-2 px-3 py-1 mx-4 rounded-lg border transition-all duration-300"
+      class="flex-1 min-w-0 max-w-5xl flex items-center gap-2 px-3 py-1 mx-2 sm:mx-4 rounded-lg border transition-all duration-300"
       :class="
         timerBarFocused
           ? 'border-emerald-500/50 bg-white dark:bg-gray-800 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
@@ -148,10 +148,10 @@ onUnmounted(() => {
         ref="descriptionInput"
         v-model="description"
         placeholder="What are you working on? (Alt+T or /)"
-        class="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 h-9"
+        class="flex-1 min-w-[80px] bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 h-9 truncate"
       />
 
-      <div class="flex items-center gap-1 shrink-0 ml-2">
+      <div class="flex items-center gap-1 shrink-0 ml-2 overflow-x-auto scrollbar-hide">
         <USelectMenu
           v-model="selectedProjectId"
           :items="projects"

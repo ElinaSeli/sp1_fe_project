@@ -4,6 +4,8 @@ import { timerService } from '~/services/timer.service'
 export const useTimerStore = defineStore(
   'timer',
   () => {
+    const toast = useToast()
+
     const isRunning = ref(false)
     const isStarting = ref(false)
     const isStopping = ref(false)
@@ -39,6 +41,7 @@ export const useTimerStore = defineStore(
 
     async function startTimer() {
       const workspacesStore = useWorkspacesStore()
+
       if (!workspacesStore.activeWorkspaceId) throw new Error('No active workspace')
       if (!draftEntry.value.projectId) throw new Error('Please select a project first')
 
@@ -56,8 +59,23 @@ export const useTimerStore = defineStore(
           activeEntryId.value = response.data.id
           startTimestamp.value = Date.now()
         } else if (response.error) {
-          throw new Error(response.error.message)
+          throw response.error
         }
+      } catch (error: unknown) {
+        console.warn('Timer start failed, falling back to mock state:', error)
+
+        // Show fallback toast
+        toast.add({
+          title: 'Backend not ready',
+          description: 'Mocking timer state for UI testing (API returned error).',
+          color: 'warning',
+          icon: 'i-lucide-alert-triangle'
+        })
+
+        // Manual state update for fallback
+        isRunning.value = true
+        startTimestamp.value = Date.now()
+        activeEntryId.value = 'mock-id-' + Date.now()
       } finally {
         isStarting.value = false
       }
@@ -65,6 +83,7 @@ export const useTimerStore = defineStore(
 
     async function stopTimer() {
       const workspacesStore = useWorkspacesStore()
+
       if (!workspacesStore.activeWorkspaceId) throw new Error('No active workspace')
 
       isStopping.value = true
@@ -76,8 +95,23 @@ export const useTimerStore = defineStore(
           activeEntryId.value = null
           resetDraft()
         } else if (response.error) {
-          throw new Error(response.error.message)
+          throw response.error
         }
+      } catch (error: unknown) {
+        console.warn('Timer stop failed, falling back to mock state:', error)
+
+        toast.add({
+          title: 'Backend not ready',
+          description: 'Mocking stop state for UI testing.',
+          color: 'warning',
+          icon: 'i-lucide-alert-triangle'
+        })
+
+        // Manual state reset for fallback
+        isRunning.value = false
+        startTimestamp.value = null
+        activeEntryId.value = null
+        resetDraft()
       } finally {
         isStopping.value = false
       }
