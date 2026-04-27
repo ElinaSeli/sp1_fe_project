@@ -86,7 +86,8 @@ const groupedEntries = computed(() => {
         <div
           v-for="(entry, index) in group.items"
           :key="entry.id"
-          class="flex items-center justify-between p-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
+          tabindex="0"
+          class="flex items-center justify-between p-4 transition-all hover:bg-gray-50 dark:hover:bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500/50 outline-none"
           :class="{ 'border-t border-gray-100 dark:border-gray-800': index !== 0 }"
         >
           <div class="flex items-center gap-4 flex-1 min-w-0">

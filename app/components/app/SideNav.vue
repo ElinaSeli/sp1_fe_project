@@ -108,30 +108,46 @@ const onLogout = async () => {
     </div>
 
     <!-- Bottom Panel -->
-    <div class="p-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
-      <div v-if="!isMini" class="flex items-center gap-3 mb-4 px-2">
-        <UAvatar
-          :alt="authStore.currentUser?.username || 'U'"
-          size="sm"
-          class="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold"
-        />
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">
-            {{ authStore.currentUser?.username || 'User' }}
-          </p>
-          <p class="text-[10px] text-gray-500 dark:text-gray-400 truncate tracking-tight uppercase">
-            Free Plan
-          </p>
+    <div class="p-4 border-t border-gray-200 dark:border-gray-800 shrink-0 space-y-2">
+      <!-- Row 1: Account + Settings -->
+      <div class="flex items-center justify-between" :class="isMini ? 'flex-col gap-2' : ''">
+        <div v-if="!isMini" class="flex items-center gap-3 flex-1 min-w-0 px-2">
+          <UAvatar
+            :alt="authStore.currentUser?.username || 'U'"
+            size="sm"
+            class="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold"
+          />
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">
+              {{ authStore.currentUser?.username || 'User' }}
+            </p>
+            <p
+              class="text-[10px] text-gray-500 dark:text-gray-400 truncate tracking-tight uppercase"
+            >
+              Free Plan
+            </p>
+          </div>
         </div>
+        <UButton
+          icon="i-lucide-settings"
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          class="justify-center"
+          :class="isMini ? '' : 'shrink-0'"
+          to="/settings"
+        />
       </div>
 
-      <div class="grid gap-2 mb-2" :class="isMini ? 'grid-cols-1' : 'grid-cols-4'">
+      <!-- Row 2: Theme + Notifications -->
+      <div class="flex items-center" :class="isMini ? 'flex-col gap-2' : 'justify-between'">
         <UButton
           :icon="isDark ? 'i-lucide-moon' : 'i-lucide-sun'"
           variant="ghost"
           color="neutral"
           size="sm"
           class="justify-center"
+          :label="isMini ? '' : 'Appearance'"
           @click="isDark = !isDark"
         />
         <UButton
@@ -141,23 +157,19 @@ const onLogout = async () => {
           size="sm"
           class="justify-center"
         />
-        <UButton
-          icon="i-lucide-settings"
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          class="justify-center"
-          to="/settings"
-        />
-        <UButton
-          icon="i-lucide-log-out"
-          variant="ghost"
-          color="error"
-          size="sm"
-          class="justify-center"
-          @click="onLogout"
-        />
       </div>
+
+      <!-- Row 3: Logout -->
+      <UButton
+        icon="i-lucide-log-out"
+        variant="ghost"
+        color="error"
+        size="sm"
+        class="w-full justify-start text-gray-500 hover:text-error-600 px-3"
+        @click="onLogout"
+      >
+        <span v-if="!isMini">Logout</span>
+      </UButton>
     </div>
   </nav>
 </template>
