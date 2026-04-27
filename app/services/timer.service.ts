@@ -20,15 +20,16 @@ export const timerService = {
       return {
         data: {
           id: 'mock-timer-entry-1',
-          workspaceId,
-          description: payload.description,
-          projectId: payload.projectId,
-          taskId: payload.taskId,
+          description: payload.description || null,
+          projectId: payload.projectId || null,
+          issueId: payload.taskId || null,
           tagIds: payload.tagIds || [],
-          startTime: new Date().toISOString()
+          timeStart: new Date().toISOString(),
+          timeEnd: null,
+          timeEntryState: 'RUNNING',
+          syncState: 'LOCAL_ONLY'
         },
-        error: null,
-        status: 200
+        error: null
       }
     }
     return res
@@ -48,14 +49,16 @@ export const timerService = {
       return {
         data: {
           id: 'mock-timer-entry-1',
-          workspaceId,
           description: 'Mock entry',
           projectId: 'mock-project',
-          startTime: new Date(Date.now() - 3600000).toISOString(),
-          endTime: new Date().toISOString()
+          issueId: null,
+          tagIds: [],
+          timeStart: new Date(Date.now() - 3600000).toISOString(),
+          timeEnd: new Date().toISOString(),
+          timeEntryState: 'VALIDATED',
+          syncState: 'LOCAL_ONLY'
         },
-        error: null,
-        status: 200
+        error: null
       }
     }
     return res
@@ -70,7 +73,7 @@ export const timerService = {
 
     if (res.error) {
       console.warn('Fetch active timer API failed, falling back to mock data:', res.error)
-      return { data: null, error: null, status: 200 }
+      return { data: null, error: null }
     }
     return res
   }

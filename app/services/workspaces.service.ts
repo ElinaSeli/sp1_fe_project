@@ -25,13 +25,11 @@ export const workspacesService = {
           {
             id: 'mock-ws-1',
             name: 'Personal Workspace',
-            ownerId: 'mock-user-1',
-            isArchived: false,
+            description: 'Mock workspace for local UI development',
             createdAt: new Date().toISOString()
           }
         ],
-        error: null,
-        status: 200
+        error: null
       }
     }
     return res

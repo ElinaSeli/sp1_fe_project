@@ -31,7 +31,9 @@ export const authService = {
         data: {
           access_token: 'mock-jwt-token-12345',
           expires_in: 3600,
-          token_type: 'Bearer'
+          token_type: 'Bearer',
+          username: credentials.username,
+          roles: ['ROLE_USER']
         },
         error: null
       }
@@ -55,10 +57,10 @@ export const authService = {
           id: 'mock-user-1',
           username: payload.username,
           email: payload.email,
-          createdAt: new Date().toISOString()
+          firstName: 'Mock',
+          lastName: 'User'
         },
-        error: null,
-        status: 200
+        error: null
       }
     }
     return res
@@ -78,10 +80,10 @@ export const authService = {
           id: 'mock-user-1',
           username: 'demo_user',
           email: 'demo@example.com',
-          createdAt: new Date().toISOString()
+          firstName: 'Demo',
+          lastName: 'User'
         },
-        error: null,
-        status: 200
+        error: null
       }
     }
     return res

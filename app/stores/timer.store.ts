@@ -59,10 +59,10 @@ export const useTimerStore = defineStore(
       if (response.data) {
         isRunning.value = true
         activeEntryId.value = response.data.id
-        startTimestamp.value = new Date(response.data.startTime).getTime()
-        draftEntry.value.description = response.data.description
+        startTimestamp.value = new Date(response.data.timeStart).getTime()
+        draftEntry.value.description = response.data.description || ''
         draftEntry.value.projectId = response.data.projectId
-        draftEntry.value.taskId = response.data.taskId || null
+        draftEntry.value.taskId = response.data.issueId || null
         draftEntry.value.tagIds = response.data.tagIds || []
       } else {
         isRunning.value = false
@@ -121,7 +121,7 @@ export const useTimerStore = defineStore(
       isStopping.value = true
       try {
         const response = await timerService.stop(workspacesStore.activeWorkspaceId)
-        if (response.data || response.status === 200 || response.status === 204) {
+        if (response.data) {
           isRunning.value = false
           startTimestamp.value = null
           activeEntryId.value = null

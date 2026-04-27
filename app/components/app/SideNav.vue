@@ -77,8 +77,7 @@ const onLogout = async () => {
           :class="isMini ? 'w-10 mx-auto' : 'w-full'"
           :placeholder="isMini ? '' : 'Select Workspace'"
           :ui="{
-            trigger:
-              'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors'
+            base: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors'
           }"
         >
           <template #leading>
@@ -94,7 +93,7 @@ const onLogout = async () => {
           :to="link.to"
           :icon="link.icon"
           :variant="route.path === link.to ? 'soft' : 'ghost'"
-          :color="route.path === link.to ? 'emerald' : 'neutral'"
+          :color="route.path === link.to ? 'primary' : 'neutral'"
           class="w-full transition-all duration-200"
           :class="[
             route.path === link.to ? 'font-semibold' : 'text-gray-600 dark:text-gray-400',

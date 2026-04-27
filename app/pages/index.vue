@@ -25,7 +25,7 @@ const groupedEntries = computed(() => {
     {}
 
   timerStore.entries.forEach((entry) => {
-    const dateKey = entry.createdAt.split('T')[0]
+    const dateKey = entry.createdAt?.split('T')[0] || 'Unknown'
     if (!groups[dateKey]) {
       groups[dateKey] = { date: dateKey, items: [], total: 0 }
     }
@@ -71,7 +71,7 @@ const groupedEntries = computed(() => {
                 <span
                   class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded"
                 >
-                  {{ entry.project }}
+                  {{ entry.projectId || 'No Project' }}
                 </span>
               </div>
             </div>

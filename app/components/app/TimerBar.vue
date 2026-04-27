@@ -18,10 +18,10 @@ const selectedTaskId = computed({
     timerStore.draftEntry.taskId = v || null
   }
 })
-const selectedTags = computed({
-  get: () => timerStore.draftEntry.tagIds as string[],
-  set: (v) => {
-    timerStore.draftEntry.tagIds = v
+const selectedTag = computed({
+  get: () => timerStore.draftEntry.tagIds[0] || '',
+  set: (v: string) => {
+    timerStore.draftEntry.tagIds = v ? [v] : []
   }
 })
 
@@ -157,14 +157,13 @@ onUnmounted(() => {
           placeholder="Project"
           size="xs"
         >
-          <template #default="{ open }">
+          <template #default>
             <UButton
               variant="ghost"
-              color="gray"
+              color="neutral"
               icon="i-lucide-folder"
               :label="projects.find((p) => p.id === selectedProjectId)?.label || 'Project'"
               class="max-w-[120px] truncate"
-              @click="open"
             />
           </template>
         </USelectMenu>
@@ -176,27 +175,25 @@ onUnmounted(() => {
           placeholder="Task"
           size="xs"
         >
-          <template #default="{ open }">
+          <template #default>
             <UButton
               variant="ghost"
-              color="gray"
+              color="neutral"
               icon="i-lucide-check-square"
               :label="tasks.find((t) => t.id === selectedTaskId)?.label || 'Task'"
               class="max-w-[120px] truncate"
-              @click="open"
             />
           </template>
         </USelectMenu>
 
-        <USelectMenu v-model="selectedTags" :items="tags" placeholder="Tags" size="xs">
-          <template #default="{ open }">
+        <USelectMenu v-model="selectedTag" :items="tags" placeholder="Tags" size="xs">
+          <template #default>
             <UButton
               variant="ghost"
-              color="gray"
+              color="neutral"
               icon="i-lucide-tag"
-              :label="selectedTags.length ? selectedTags.join(', ') : 'Tags'"
+              :label="selectedTag ? selectedTag : 'Tags'"
               class="max-w-[120px] truncate"
-              @click="open"
             />
           </template>
         </USelectMenu>
@@ -214,7 +211,7 @@ onUnmounted(() => {
       <UButton
         ref="startButton"
         :icon="isRunning ? 'i-lucide-square' : 'i-lucide-play'"
-        :color="isRunning ? 'error' : 'emerald'"
+        :color="isRunning ? 'error' : 'primary'"
         :loading="isStarting || isStopping"
         size="md"
         class="min-w-[80px] sm:min-w-[100px] justify-center font-bold shadow-lg"
