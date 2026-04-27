@@ -41,3 +41,75 @@ export const MOCK_WORKSPACES = [
     createdAt: '2025-02-01T00:00:00Z'
   }
 ]
+
+export const MOCK_PROJECTS = [
+  { id: '00000000-0000-0000-0000-000000000020', name: 'Internal', color: 'emerald' },
+  { id: '00000000-0000-0000-0000-000000000021', name: 'Client A', color: 'blue' },
+  { id: '00000000-0000-0000-0000-000000000022', name: 'Open Source', color: 'purple' }
+]
+
+export const MOCK_TASKS = [
+  {
+    id: '00000000-0000-0000-0000-000000000040',
+    name: 'Development',
+    projectId: '00000000-0000-0000-0000-000000000020'
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000041',
+    name: 'Design',
+    projectId: '00000000-0000-0000-0000-000000000020'
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000042',
+    name: 'Code Review',
+    projectId: '00000000-0000-0000-0000-000000000020'
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000043',
+    name: 'Meeting',
+    projectId: '00000000-0000-0000-0000-000000000021'
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000044',
+    name: 'Bug Fix',
+    projectId: '00000000-0000-0000-0000-000000000022'
+  }
+]
+
+export const MOCK_TAGS = ['Engineering', 'Urgent', 'Research', 'UI/UX']
+
+export const MOCK_TIME_ENTRIES = [
+  {
+    id: '00000000-0000-0000-0000-000000000030',
+    description: 'Design System Overhaul',
+    projectId: '00000000-0000-0000-0000-000000000020',
+    issueId: null,
+    timeStart: '2026-04-27T10:00:00Z',
+    timeEnd: '2026-04-27T12:00:00Z',
+    timeEntryState: 'VALIDATED',
+    syncState: 'SYNCED',
+    tagIds: []
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000031',
+    description: 'Fixing Sidebar bugs',
+    projectId: '00000000-0000-0000-0000-000000000020',
+    issueId: null,
+    timeStart: '2026-04-27T11:00:00Z',
+    timeEnd: '2026-04-27T12:00:00Z',
+    timeEntryState: 'VALIDATED',
+    syncState: 'SYNCED',
+    tagIds: []
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000032',
+    description: 'Client Meeting',
+    projectId: '00000000-0000-0000-0000-000000000021',
+    issueId: null,
+    timeStart: '2026-04-26T14:00:00Z',
+    timeEnd: '2026-04-26T14:30:00Z',
+    timeEntryState: 'VALIDATED',
+    syncState: 'SYNCED',
+    tagIds: []
+  }
+]

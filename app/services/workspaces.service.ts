@@ -14,9 +14,6 @@ import type {
 import { useApiClient } from '~/composables/useApiClient'
 
 export const workspacesService = {
-  /**
-   * Fetch all workspaces for the currently authenticated user.
-   */
   async getAll(): Promise<ServiceResponse<Workspace[]>> {
     const { request } = useApiClient()
     return request<Workspace[]>('/api/workspaces')

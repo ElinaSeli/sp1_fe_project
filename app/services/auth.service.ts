@@ -17,8 +17,6 @@ import { useApiClient } from '~/composables/useApiClient'
 export const authService = {
   /** Authenticate with username + password. */
   async login(credentials: LoginRequest): Promise<ServiceResponse<AuthResponse>> {
-    // Route through the Vite dev proxy (/api-proxy) to avoid CORS.
-    // The proxy strips /api-proxy and forwards to the real backend.
     try {
       const data = await $fetch<AuthResponse>('/api-proxy/login', {
         method: 'POST',

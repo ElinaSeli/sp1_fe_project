@@ -1,63 +1,98 @@
 <script setup lang="ts">
-import { useAuthStore } from '~/stores/auth.store'
-import { useWorkspacesStore } from '~/stores/workspaces.store'
-
 definePageMeta({
   layout: 'dashboard'
 })
 
-const authStore = useAuthStore()
-const workspacesStore = useWorkspacesStore()
+const timerStore = useTimerStore()
 
-// We'll initialize workspaces on mount if they haven't been loaded yet
-onMounted(async () => {
-  await workspacesStore.fetchWorkspaces()
+onMounted(() => timerStore.fetchEntries())
+
+const formatDuration = (seconds: number) => {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  return `${h}h ${m}m`
+}
+
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr)
+  const today = new Date()
+  if (date.toDateString() === today.toDateString()) return 'Today'
+
+  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+}
+
+// Group entries by date
+const groupedEntries = computed(() => {
+  const groups: Record<string, { date: string; items: typeof timerStore.entries; total: number }> =
+    {}
+
+  timerStore.entries.forEach((entry) => {
+    const dateKey = entry.timeStart.split('T')[0]!
+    if (!groups[dateKey]) {
+      groups[dateKey] = { date: dateKey, items: [], total: 0 }
+    }
+    groups[dateKey].items.push(entry)
+    groups[dateKey].total += entry.duration
+  })
+
+  return Object.values(groups).sort((a, b) => b.date.localeCompare(a.date))
 })
 </script>
 
 <template>
-  <div class="space-y-8">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-          Welcome back, {{ authStore.currentUser?.firstName || authStore.currentUser?.username }}!
-        </h1>
-        <p v-if="workspacesStore.activeWorkspace" class="text-gray-500 dark:text-gray-400 mt-1">
-          You are currently in the
-          <span class="font-semibold text-primary-500">{{
-            workspacesStore.activeWorkspace.name
-          }}</span>
-          workspace.
-        </p>
+  <div class="max-w-5xl mx-auto space-y-8">
+    <div v-for="group in groupedEntries" :key="group.date" class="space-y-3">
+      <!-- Date Header -->
+      <div class="flex items-center justify-between px-2">
+        <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500">
+          {{ formatDate(group.date) }}
+        </h3>
+        <span class="text-xs font-mono text-gray-400">
+          Total: <span class="text-emerald-500 font-bold">{{ formatDuration(group.total) }}</span>
+        </span>
       </div>
 
-      <div class="flex gap-3">
-        <UButton icon="i-lucide-plus" color="primary">New Project</UButton>
-      </div>
-    </div>
+      <!-- Entries Card -->
+      <div
+        class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm"
+      >
+        <div
+          v-for="(entry, index) in group.items"
+          :key="entry.id"
+          tabindex="0"
+          class="flex items-center justify-between p-4 transition-all hover:bg-gray-50 dark:hover:bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500/50 outline-none"
+          :class="{ 'border-t border-gray-100 dark:border-gray-800': index !== 0 }"
+        >
+          <div class="flex items-center gap-4 flex-1 min-w-0">
+            <div class="w-1 h-8 rounded-full bg-emerald-500" />
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                {{ entry.description }}
+              </p>
+              <div class="flex items-center gap-2 mt-1">
+                <span
+                  class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded"
+                >
+                  {{ entry.projectId || 'No Project' }}
+                </span>
+              </div>
+            </div>
+          </div>
 
-    <!-- Active Tracker Placeholder -->
-    <UCard class="border-primary-500 border-l-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4 flex-1">
-          <UIcon name="i-lucide-play-circle" class="text-3xl text-primary-500" />
-          <span class="text-gray-400 italic"
-            >What are you working on right now? (Press '/' to start)</span
-          >
+          <div class="flex items-center gap-6">
+            <span class="text-sm font-mono font-medium text-gray-600 dark:text-gray-400">
+              {{ formatDuration(entry.duration) }}
+            </span>
+            <UButton
+              icon="i-lucide-play"
+              variant="ghost"
+              color="neutral"
+              size="xs"
+              class="hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-600"
+            />
+          </div>
         </div>
-        <UButton color="neutral" variant="ghost" icon="i-lucide-more-horizontal" />
       </div>
-    </UCard>
-
-    <!-- Empty State for Time Entries -->
-    <div
-      class="py-20 text-center border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-xl"
-    >
-      <UIcon name="i-lucide-history" class="text-4xl text-gray-300 dark:text-gray-700 mb-4" />
-      <h3 class="text-lg font-medium text-gray-900 dark:text-white">No time entries yet</h3>
-      <p class="text-gray-500 dark:text-gray-400 max-w-xs mx-auto mt-2">
-        Start the timer above to log your first activity in this workspace.
-      </p>
     </div>
   </div>
 </template>
