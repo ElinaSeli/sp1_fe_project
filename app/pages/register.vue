@@ -96,7 +96,7 @@ async function onRegister() {
     <form v-if="!success" class="flex flex-col gap-4" novalidate @submit.prevent="onRegister">
       <!-- Names -->
       <div class="grid grid-cols-2 gap-4">
-        <UFormField label="First Name" :error="fieldErrors.firstName">
+        <UFormField label="First Name" :error="fieldErrors.firstName" required>
           <UInput v-model="form.firstName" placeholder="Jane" class="w-full" autofocus />
         </UFormField>
         <UFormField label="Last Name">
@@ -104,7 +104,7 @@ async function onRegister() {
         </UFormField>
       </div>
 
-      <UFormField label="Username" :error="fieldErrors.username">
+      <UFormField label="Username" :error="fieldErrors.username" required>
         <UInput
           v-model="form.username"
           placeholder="jdoe88"
@@ -114,7 +114,7 @@ async function onRegister() {
         />
       </UFormField>
 
-      <UFormField label="Email" :error="fieldErrors.email || emailError">
+      <UFormField label="Email" :error="fieldErrors.email || emailError" required>
         <UInput
           v-model="form.email"
           type="email"
@@ -126,7 +126,7 @@ async function onRegister() {
       </UFormField>
 
       <!-- Password -->
-      <UFormField label="Password" :error="fieldErrors.password">
+      <UFormField label="Password" :error="fieldErrors.password" required>
         <UInput
           v-model="form.password"
           type="password"
@@ -138,7 +138,7 @@ async function onRegister() {
       </UFormField>
 
       <!-- Confirm Password -->
-      <UFormField label="Confirm Password" :error="fieldErrors.confirmPassword">
+      <UFormField label="Confirm Password" :error="fieldErrors.confirmPassword" required>
         <UInput
           v-model="form.confirmPassword"
           type="password"
