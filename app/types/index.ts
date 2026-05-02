@@ -153,14 +153,26 @@ export type KeybindingActionId =
   | 'startTimer'
   | 'saveTimer'
   | 'stopTimer'
-  | 'newTimeEntry'
-  | 'goToDashboard'
   | 'resumeLast'
+  | 'goToDashboard'
+  | 'focusTaskField'
+  | 'focusDescField'
+  | 'editLastEntry'
+  | 'newTimeEntry'
+  | 'createNew'
+
+export type KeybindingCategory = 'timer' | 'navigation' | 'timeEntry' | 'special'
 
 export interface KeybindingAction {
   id: KeybindingActionId
   label: string
   description: string
+  category: KeybindingCategory
+}
+
+export interface KeybindingBinding {
+  key: string
+  enabled: boolean
 }
 
 // ---------------------------------------------------------------------------
