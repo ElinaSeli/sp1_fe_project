@@ -2,12 +2,12 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "sp1-timetracking-fe-drafts",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "cz.cvut.fit.sp1.tte",
   "build": {
-    "frontendDist": "../dist",
+    "frontendDist": "../.output/public",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build"
+    "beforeBuildCommand": "pnpm generate"
   },
   "app": {
     "windows": [
@@ -25,7 +25,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["deb"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
