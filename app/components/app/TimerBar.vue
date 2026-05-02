@@ -165,6 +165,7 @@ onUnmounted(() => {
       <input
         ref="descriptionInput"
         v-model="description"
+        data-focus="desc-field"
         placeholder="What are you working on? (Alt+T or /)"
         class="flex-1 min-w-[150px] bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 h-9 truncate"
       />
@@ -201,6 +202,7 @@ onUnmounted(() => {
         >
           <template #default>
             <UButton
+              data-focus="task-field"
               variant="ghost"
               color="neutral"
               icon="i-lucide-check-square"

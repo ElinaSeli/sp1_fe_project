@@ -14,15 +14,14 @@ function buildKeyString(e: KeyboardEvent): string {
   return parts.join('+')
 }
 
-// TODO: implement dispatch for each action — stubs prove the binding fires
 const ACTION_HANDLERS: Record<KeybindingActionId, () => void> = {
   startTimer: () => console.warn('[keybinding] startTimer fired — TODO'),
   saveTimer: () => console.warn('[keybinding] saveTimer fired — TODO'),
   stopTimer: () => console.warn('[keybinding] stopTimer fired — TODO'),
   resumeLast: () => console.warn('[keybinding] resumeLast fired — TODO'),
-  goToDashboard: () => console.warn('[keybinding] goToDashboard fired — TODO'),
-  focusTaskField: () => console.warn('[keybinding] focusTaskField fired — TODO'),
-  focusDescField: () => console.warn('[keybinding] focusDescField fired — TODO'),
+  goToDashboard: () => { navigateTo('/') },
+  focusTaskField: () => document.querySelector<HTMLElement>('[data-focus="task-field"]')?.click(),
+  focusDescField: () => document.querySelector<HTMLElement>('[data-focus="desc-field"]')?.focus(),
   editLastEntry: () => console.warn('[keybinding] editLastEntry fired — TODO'),
   newTimeEntry: () => console.warn('[keybinding] newTimeEntry fired — TODO'),
   createNew: () => console.warn('[keybinding] createNew fired — TODO')
@@ -97,21 +96,17 @@ export function useKeybindings() {
   // --- Lifecycle ---
 
   onMounted(async () => {
+    window.addEventListener('keydown', handleKeydown)
     if (isTauri) {
       await registerTauri()
       watch(() => store.bindings, registerTauri, { deep: true })
-    } else {
-      window.addEventListener('keydown', handleKeydown)
     }
   })
 
   onScopeDispose(async () => {
+    window.removeEventListener('keydown', handleKeydown)
     if (isTauri) {
       await unregisterAllTauri()
-    } else {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('keydown', handleKeydown)
-      }
     }
   })
 }
