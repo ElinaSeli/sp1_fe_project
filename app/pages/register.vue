@@ -24,6 +24,32 @@ const passwordsMatch = computed(
   () => !!form.value.confirmPassword && form.value.password === form.value.confirmPassword
 )
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+const emailError = computed(() =>
+  form.value.email && !emailRegex.test(form.value.email) ? 'Enter a valid email address' : undefined
+)
+
+const fieldErrors = ref<{ [k: string]: string | undefined }>({
+  firstName: undefined,
+  username: undefined,
+  email: undefined,
+  password: undefined,
+  confirmPassword: undefined
+})
+
+function validateFields(): boolean {
+  fieldErrors.value.firstName = form.value.firstName.trim() ? undefined : 'First name is required'
+  fieldErrors.value.username = form.value.username.trim() ? undefined : 'Username is required'
+  fieldErrors.value.email = form.value.email.trim() ? undefined : 'Email is required'
+  fieldErrors.value.password = form.value.password ? undefined : 'Password is required'
+  fieldErrors.value.confirmPassword = !form.value.confirmPassword
+    ? 'Please confirm your password'
+    : !passwordsMatch.value
+      ? 'Passwords do not match'
+      : undefined
+  return Object.values(fieldErrors.value).every((e) => !e) && !emailError.value
+}
+
 let redirectTimer: ReturnType<typeof setTimeout> | null = null
 onUnmounted(() => {
   if (redirectTimer) clearTimeout(redirectTimer)
@@ -31,14 +57,7 @@ onUnmounted(() => {
 
 async function onRegister() {
   if (loading.value) return
-  if (!form.value.confirmPassword) {
-    errorMsg.value = 'Please confirm your password.'
-    return
-  }
-  if (!passwordsMatch.value) {
-    errorMsg.value = 'Passwords do not match.'
-    return
-  }
+  if (!validateFields()) return
 
   errorMsg.value = null
   loading.value = true
@@ -74,80 +93,65 @@ async function onRegister() {
       </h1>
     </template>
 
-    <form v-if="!success" class="flex flex-col gap-4" @submit.prevent="onRegister">
+    <form v-if="!success" class="flex flex-col gap-4" novalidate @submit.prevent="onRegister">
       <!-- Names -->
       <div class="grid grid-cols-2 gap-4">
-        <UFormField label="First Name">
-          <UInput v-model="form.firstName" placeholder="Jane" autofocus required />
+        <UFormField label="First Name" :error="fieldErrors.firstName">
+          <UInput v-model="form.firstName" placeholder="Jane" class="w-full" autofocus />
         </UFormField>
         <UFormField label="Last Name">
-          <UInput v-model="form.lastName" placeholder="Doe" required />
+          <UInput v-model="form.lastName" placeholder="Doe" class="w-full" />
         </UFormField>
       </div>
 
-      <UFormField label="Username">
+      <UFormField label="Username" :error="fieldErrors.username">
         <UInput
           v-model="form.username"
           placeholder="jdoe88"
           icon="i-lucide-user"
           autocomplete="username"
-          required
+          class="w-full"
         />
       </UFormField>
 
-      <UFormField label="Email">
+      <UFormField label="Email" :error="fieldErrors.email || emailError">
         <UInput
           v-model="form.email"
           type="email"
           placeholder="you@example.com"
           icon="i-lucide-mail"
           autocomplete="email"
-          required
+          class="w-full"
         />
       </UFormField>
 
       <!-- Password -->
-      <UFormField
-        label="Password"
-        :error="!passwordsMatch && form.confirmPassword ? 'Passwords do not match' : undefined"
-      >
+      <UFormField label="Password" :error="fieldErrors.password">
         <UInput
           v-model="form.password"
           type="password"
           placeholder="••••••••"
           icon="i-lucide-lock"
           autocomplete="new-password"
-          required
+          class="w-full"
         />
       </UFormField>
 
       <!-- Confirm Password -->
-      <UFormField label="Confirm Password">
+      <UFormField label="Confirm Password" :error="fieldErrors.confirmPassword">
         <UInput
           v-model="form.confirmPassword"
           type="password"
           placeholder="••••••••"
           icon="i-lucide-check-circle"
           autocomplete="new-password"
-          required
+          class="w-full"
         />
       </UFormField>
 
-      <UAlert
-        v-if="errorMsg"
-        icon="i-lucide-alert-circle"
-        color="error"
-        variant="soft"
-        :description="errorMsg"
-      />
+      <UAlert v-if="errorMsg" color="error" variant="soft" :description="errorMsg" />
 
-      <UButton
-        type="submit"
-        color="primary"
-        block
-        :loading="loading"
-        :disabled="!passwordsMatch && form.confirmPassword !== ''"
-      >
+      <UButton type="submit" color="primary" block :loading="loading" :disabled="loading">
         Create account
       </UButton>
     </form>

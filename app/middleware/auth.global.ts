@@ -10,7 +10,7 @@ import { useAuthStore } from '~/stores/auth.store'
 export default defineNuxtRouteMiddleware((to) => {
   const authStore = useAuthStore()
 
-  const publicRoutes = ['/login', '/register']
+  const publicRoutes = ['/login', '/register', '/forgot-password']
   const isPublicRoute = publicRoutes.includes(to.path)
 
   // 1. If not authenticated and trying to access a protected route
