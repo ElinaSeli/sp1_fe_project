@@ -18,8 +18,9 @@ export function useApiClient() {
    * Core request helper used by all service methods.
    */
   async function request<T>(path: string, options: FetchOptions = {}): Promise<ServiceResponse<T>> {
-    // Dynamically read the token at call time so we always get the latest value.
-    const token = useCookie('auth_token').value
+    // Read from the auth store's reactive ref — more reliable than re-reading the
+    // cookie directly, which can lag on non-standard origins (tauri://, file://).
+    const token = useAuthStore().token
 
     // Ensure path doesn't have a leading slash if we're joining with baseURL
     const normalizedPath = path.startsWith('/') ? path.substring(1) : path

@@ -51,6 +51,7 @@ async function onLogin() {
       if (profileResponse.error) {
         errorMsg.value = 'Failed to load user profile: ' + profileResponse.error
       } else {
+        await useWorkspacesStore().fetchWorkspaces()
         await router.push('/')
       }
     } else {

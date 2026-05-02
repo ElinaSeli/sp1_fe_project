@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { authService } from '~/services'
+import { validateEmail, validatePassword, validateConfirmPassword } from '~/composables/usePasswordValidation'
 
 definePageMeta({
   layout: 'auth'
@@ -20,15 +21,6 @@ const loading = ref(false)
 const errorMsg = ref<string | null>(null)
 const success = ref(false)
 
-const passwordsMatch = computed(
-  () => !!form.value.confirmPassword && form.value.password === form.value.confirmPassword
-)
-
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
-const emailError = computed(() =>
-  form.value.email && !emailRegex.test(form.value.email) ? 'Enter a valid email address' : undefined
-)
-
 const fieldErrors = ref<{ [k: string]: string | undefined }>({
   firstName: undefined,
   username: undefined,
@@ -40,14 +32,10 @@ const fieldErrors = ref<{ [k: string]: string | undefined }>({
 function validateFields(): boolean {
   fieldErrors.value.firstName = form.value.firstName.trim() ? undefined : 'First name is required'
   fieldErrors.value.username = form.value.username.trim() ? undefined : 'Username is required'
-  fieldErrors.value.email = form.value.email.trim() ? undefined : 'Email is required'
-  fieldErrors.value.password = form.value.password ? undefined : 'Password is required'
-  fieldErrors.value.confirmPassword = !form.value.confirmPassword
-    ? 'Please confirm your password'
-    : !passwordsMatch.value
-      ? 'Passwords do not match'
-      : undefined
-  return Object.values(fieldErrors.value).every((e) => !e) && !emailError.value
+  fieldErrors.value.email = validateEmail(form.value.email)
+  fieldErrors.value.password = validatePassword(form.value.password)
+  fieldErrors.value.confirmPassword = validateConfirmPassword(form.value.password, form.value.confirmPassword)
+  return Object.values(fieldErrors.value).every((e) => !e)
 }
 
 let redirectTimer: ReturnType<typeof setTimeout> | null = null
@@ -114,7 +102,7 @@ async function onRegister() {
         />
       </UFormField>
 
-      <UFormField label="Email" :error="fieldErrors.email || emailError" required>
+      <UFormField label="Email" :error="fieldErrors.email" required>
         <UInput
           v-model="form.email"
           type="email"
