@@ -34,6 +34,18 @@ const elapsedSeconds = ref(0)
 const toast = useToast()
 const timerBarFocused = ref(false)
 const descriptionInput = ref<HTMLInputElement | null>(null)
+const taskSelectOpen = ref(false)
+
+onMounted(() => {
+  window.addEventListener('app:focusTaskField', () => {
+    taskSelectOpen.value = true
+  })
+})
+onUnmounted(() => {
+  window.removeEventListener('app:focusTaskField', () => {
+    taskSelectOpen.value = true
+  })
+})
 const startButton = ref<{ $el?: HTMLElement; focus?: () => void } | null>(null)
 
 const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
@@ -192,6 +204,7 @@ onUnmounted(() => {
 
         <USelectMenu
           v-model="selectedTaskId"
+          v-model:open="taskSelectOpen"
           :items="
             (tasks ?? []).filter((t) => !selectedProjectId || t.projectId === selectedProjectId)
           "
