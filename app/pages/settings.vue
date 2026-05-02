@@ -2,24 +2,38 @@
 definePageMeta({
   layout: 'dashboard'
 })
+
+const tabs = [
+  { label: 'Profile', icon: 'i-lucide-user', slot: 'profile' },
+  { label: 'Notifications', icon: 'i-lucide-bell', slot: 'notifications' },
+  { label: 'Privacy', icon: 'i-lucide-shield', slot: 'privacy' },
+  { label: 'Shortcuts', icon: 'i-lucide-keyboard', slot: 'shortcuts' }
+]
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto py-12 px-4">
-    <UCard
-      class="bg-white/50 dark:bg-gray-900/50 backdrop-blur border-dashed border-2 border-gray-200 dark:border-gray-800"
-    >
-      <div class="flex flex-col items-center justify-center py-20 text-center">
-        <UIcon name="i-lucide-construction" class="text-6xl text-emerald-500 mb-6 animate-pulse" />
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2 uppercase tracking-tight">
-          Coming Soon
-        </h1>
-        <p class="text-gray-500 dark:text-gray-400 max-w-md">
-          We're working hard to bring the
-          <span class="text-emerald-500 font-bold uppercase">settings</span> module to life. Stay
-          tuned!
-        </p>
-      </div>
-    </UCard>
+  <div class="max-w-3xl mx-auto py-8 px-4">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Settings</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your account and preferences</p>
+    </div>
+
+    <UTabs :items="tabs" class="w-full">
+      <template #profile>
+        <SettingsProfile />
+      </template>
+
+      <template #notifications>
+        <SettingsNotifications />
+      </template>
+
+      <template #privacy>
+        <SettingsPrivacy />
+      </template>
+
+      <template #shortcuts>
+        <SettingsShortcuts />
+      </template>
+    </UTabs>
   </div>
 </template>
