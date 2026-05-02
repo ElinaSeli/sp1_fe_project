@@ -110,7 +110,9 @@ export function useKeybindings() {
       try {
         await register(binding.key, async () => {
           const { getCurrentWindow } = await import('@tauri-apps/api/window')
-          await getCurrentWindow().setFocus()
+          const win = getCurrentWindow()
+          await win.unminimize()
+          await win.setFocus()
           await waitForModifiersUp(binding.key)
           ACTION_HANDLERS[id]()
         })
