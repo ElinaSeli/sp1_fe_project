@@ -23,7 +23,18 @@ export default defineNuxtConfig({
     }
   },
 
+  // Lock dev server to port 3000 — tauri.conf.json devUrl hardcodes this port.
+  // If 3000 is occupied, Nuxt will error loudly rather than silently falling back to 3001
+  // (which would leave Tauri pointing at the wrong port).
+  devServer: {
+    port: 3000
+  },
+
   compatibilityDate: '2025-01-15',
+
+  nitro: {
+      preset: 'static'
+  },
 
   // [MOCK MODE] No proxy — server/middleware/01.mockApi.ts intercepts /api-proxy/*.
   // When real BE is ready: delete server/, uncomment the vite proxy below.
@@ -47,5 +58,5 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
-  }
+  },
 })
