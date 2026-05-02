@@ -35,3 +35,6 @@ target
 .claude/*
 .nuxtrc
 CLAUDE.md
+
+# Playwright MCP screenshots/snapshots
+.playwright-mcp/
