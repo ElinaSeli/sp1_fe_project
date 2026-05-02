@@ -95,17 +95,6 @@ watch(
   { immediate: true }
 )
 
-// Global shortcuts: Alt+T and /
-const onKeydown = (e: KeyboardEvent) => {
-  const isInput = ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)
-
-  // Alt+T or / (if not in an input)
-  if ((e.altKey && e.key === 't') || (e.key === '/' && !isInput)) {
-    e.preventDefault()
-    descriptionInput.value?.focus()
-  }
-}
-
 const startTracking = async () => {
   try {
     await timerStore.startTimer()
@@ -134,11 +123,9 @@ const stopTracking = async () => {
 
 onMounted(() => {
   timerStore.fetchActiveTimer()
-  window.addEventListener('keydown', onKeydown)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', onKeydown)
   if (tickerInterval) clearInterval(tickerInterval)
 })
 </script>

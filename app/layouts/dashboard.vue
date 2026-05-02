@@ -5,15 +5,13 @@ const toggleMini = () => {
   isMini.value = !isMini.value
 }
 
-// Global shortcut for toggling sidebar: [
-const onKeydown = (e: KeyboardEvent) => {
-  if (e.key === '[' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
-    toggleMini()
+// Fetch workspaces on every dashboard entry — covers page refresh and direct URL access.
+const workspacesStore = useWorkspacesStore()
+onMounted(async () => {
+  if (!workspacesStore.workspaces.length) {
+    await workspacesStore.fetchWorkspaces()
   }
-}
-
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+})
 </script>
 
 <template>
