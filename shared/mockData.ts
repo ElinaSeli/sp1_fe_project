@@ -1,7 +1,9 @@
-// ============================================================
-// [MOCK] Shared in-memory mock data for local development.
-// Delete server/ directory to remove all mocks.
-// ============================================================
+// [MOCK] Single source of truth for all mock data.
+// Imported by both server/middleware/01.mockApi.ts (dev) and app/plugins/mockApi.client.ts (Tauri prod).
+// Delete this file and those two when real BE is ready.
+
+export const MOCK_TOKEN = 'mock.jwt.token-for-local-dev-only'
+export const MOCK_CREDENTIALS = { username: 'testuser', password: 'password123' }
 
 export const MOCK_USER = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -10,14 +12,6 @@ export const MOCK_USER = {
   firstName: 'Test',
   lastName: 'User'
 }
-
-export const MOCK_CREDENTIALS = {
-  username: 'testuser',
-  password: 'password123'
-}
-
-// Not a real JWT — just a recognizable fake token.
-export const MOCK_TOKEN = 'mock.jwt.token-for-local-dev-only'
 
 export const MOCK_AUTH_RESPONSE = {
   username: MOCK_USER.username,
@@ -49,31 +43,11 @@ export const MOCK_PROJECTS = [
 ]
 
 export const MOCK_TASKS = [
-  {
-    id: '00000000-0000-0000-0000-000000000040',
-    name: 'Development',
-    projectId: '00000000-0000-0000-0000-000000000020'
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000041',
-    name: 'Design',
-    projectId: '00000000-0000-0000-0000-000000000020'
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000042',
-    name: 'Code Review',
-    projectId: '00000000-0000-0000-0000-000000000020'
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000043',
-    name: 'Meeting',
-    projectId: '00000000-0000-0000-0000-000000000021'
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000044',
-    name: 'Bug Fix',
-    projectId: '00000000-0000-0000-0000-000000000022'
-  }
+  { id: '00000000-0000-0000-0000-000000000040', name: 'Development', projectId: '00000000-0000-0000-0000-000000000020' },
+  { id: '00000000-0000-0000-0000-000000000041', name: 'Design', projectId: '00000000-0000-0000-0000-000000000020' },
+  { id: '00000000-0000-0000-0000-000000000042', name: 'Code Review', projectId: '00000000-0000-0000-0000-000000000020' },
+  { id: '00000000-0000-0000-0000-000000000043', name: 'Meeting', projectId: '00000000-0000-0000-0000-000000000021' },
+  { id: '00000000-0000-0000-0000-000000000044', name: 'Bug Fix', projectId: '00000000-0000-0000-0000-000000000022' }
 ]
 
 export const MOCK_TAGS = ['Engineering', 'Urgent', 'Research', 'UI/UX']

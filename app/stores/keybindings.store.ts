@@ -1,71 +1,106 @@
 import { defineStore } from 'pinia'
-import type { KeybindingAction, KeybindingActionId } from '~/types'
+import type { KeybindingAction, KeybindingActionId, KeybindingBinding } from '~/types'
 
 export const KEYBINDING_ACTIONS: KeybindingAction[] = [
   {
     id: 'startTimer',
     label: 'Start timer',
-    description: 'Start the timer if it is not already running'
+    description: 'Start the timer if it is not already running',
+    category: 'timer'
   },
   {
     id: 'saveTimer',
     label: 'Save & stop timer',
-    description: 'Stop the running timer and save the time entry'
+    description: 'Stop the running timer and save the time entry',
+    category: 'timer'
   },
   {
     id: 'stopTimer',
     label: 'Cancel timer',
-    description: 'Stop the running timer without saving'
-  },
-  {
-    id: 'newTimeEntry',
-    label: 'New time entry',
-    description: 'Open the form to add a manual time entry'
-  },
-  {
-    id: 'goToDashboard',
-    label: 'Go to dashboard',
-    description: 'Navigate to the dashboard'
+    description: 'Stop the running timer without saving',
+    category: 'timer'
   },
   {
     id: 'resumeLast',
     label: 'Resume last timer',
-    description: 'Resume the most recent time entry'
+    description: 'Resume the most recent time entry',
+    category: 'timer'
+  },
+  {
+    id: 'goToDashboard',
+    label: 'Go to dashboard',
+    description: 'Navigate to the dashboard',
+    category: 'navigation'
+  },
+  {
+    id: 'focusTaskField',
+    label: 'Focus task / issue field',
+    description: 'Start typing into the task or issue input field',
+    category: 'navigation'
+  },
+  {
+    id: 'focusDescField',
+    label: 'Focus description field',
+    description: 'Start typing into the description input field',
+    category: 'navigation'
+  },
+  {
+    id: 'editLastEntry',
+    label: 'Edit last time entry',
+    description: 'Open the most recent time entry for editing',
+    category: 'timeEntry'
+  },
+  {
+    id: 'newTimeEntry',
+    label: 'New time entry',
+    description: 'Open the form to add a manual time entry',
+    category: 'timeEntry'
+  },
+  {
+    id: 'createNew',
+    label: 'Create new',
+    // TODO: maps to whichever "create new" button is visible in the current context
+    description: 'Activate the primary "create new" button on the current screen',
+    category: 'special'
   }
 ]
 
-export const DEFAULT_BINDINGS: Record<KeybindingActionId, string> = {
-  startTimer: 'Alt+S',
-  saveTimer: 'Alt+E',
-  stopTimer: 'Alt+X',
-  newTimeEntry: 'Alt+N',
-  goToDashboard: 'Alt+D',
-  resumeLast: 'Alt+R'
+// TODO: arbitrary defaults, finalize before launch
+export const DEFAULT_BINDINGS: Record<KeybindingActionId, KeybindingBinding> = {
+  startTimer: { key: 'Alt+S', enabled: true },
+  saveTimer: { key: 'Alt+E', enabled: true },
+  stopTimer: { key: 'Alt+X', enabled: true },
+  resumeLast: { key: 'Alt+R', enabled: true },
+  goToDashboard: { key: 'Alt+D', enabled: true },
+  focusTaskField: { key: 'Alt+T', enabled: true },
+  focusDescField: { key: 'Alt+I', enabled: true },
+  editLastEntry: { key: 'Alt+L', enabled: true },
+  newTimeEntry: { key: 'Alt+N', enabled: true },
+  createNew: { key: 'Alt+C', enabled: true }
 }
 
-/**
- * useKeybindingsStore
- *
- * Manages user-customizable keyboard shortcuts.
- */
 export const useKeybindingsStore = defineStore(
-  'keybindings',
+  // version bump forces a clean reset of old persisted string-shape bindings
+  'keybindings-v2',
   () => {
-    // --- State ---
-    const bindings = ref<Record<KeybindingActionId, string>>({ ...DEFAULT_BINDINGS })
+    const bindings = ref<Record<KeybindingActionId, KeybindingBinding>>({ ...DEFAULT_BINDINGS })
 
-    // --- Actions ---
     function updateBinding(actionId: KeybindingActionId, key: string) {
-      bindings.value[actionId] = key
+      bindings.value[actionId] = { ...bindings.value[actionId], key }
+    }
+
+    function setEnabled(actionId: KeybindingActionId, enabled: boolean) {
+      bindings.value[actionId] = { ...bindings.value[actionId], enabled }
     }
 
     function resetToDefaults() {
-      bindings.value = { ...DEFAULT_BINDINGS }
+      bindings.value = structuredClone(DEFAULT_BINDINGS)
     }
 
     return {
       bindings,
       updateBinding,
+      setEnabled,
       resetToDefaults
     }
   },

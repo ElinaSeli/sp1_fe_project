@@ -20,8 +20,8 @@ export const authService = {
     try {
       const data = await $fetch<AuthResponse>('/api-proxy/login', {
         method: 'POST',
-        body: credentials,
-        headers: { Accept: 'application/json' }
+        body: JSON.stringify(credentials),
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
       })
       return { data, error: null }
     } catch (err: unknown) {

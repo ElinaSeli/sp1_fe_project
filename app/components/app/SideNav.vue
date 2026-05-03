@@ -14,7 +14,8 @@ const navLinks = [
   { to: '/', icon: 'i-lucide-layout-dashboard', label: 'Dashboard' },
   { to: '/reports', icon: 'i-lucide-bar-chart-3', label: 'Reports' },
   { to: '/workspaces', icon: 'i-lucide-briefcase', label: 'Workspaces' },
-  { to: '/integrations', icon: 'i-lucide-plug-2', label: 'Integrations' }
+  { to: '/integrations', icon: 'i-lucide-plug-2', label: 'Integrations' },
+  { to: '/settings', icon: 'i-lucide-settings', label: 'Settings' }
 ]
 
 const selectedWorkspaceId = computed({
@@ -108,34 +109,23 @@ const onLogout = async () => {
 
     <!-- Bottom Panel -->
     <div class="p-4 border-t border-gray-200 dark:border-gray-800 shrink-0 space-y-2">
-      <!-- Row 1: Account + Settings -->
-      <div class="flex items-center justify-between" :class="isMini ? 'flex-col gap-2' : ''">
-        <div v-if="!isMini" class="flex items-center gap-3 flex-1 min-w-0 px-2">
-          <UAvatar
-            :alt="authStore.currentUser?.username || 'U'"
-            size="sm"
-            class="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold"
-          />
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">
-              {{ authStore.currentUser?.username || 'User' }}
-            </p>
-            <p
-              class="text-[10px] text-gray-500 dark:text-gray-400 truncate tracking-tight uppercase"
-            >
-              Free Plan
-            </p>
-          </div>
-        </div>
-        <UButton
-          icon="i-lucide-settings"
-          variant="ghost"
-          color="neutral"
+      <!-- Row 1: Account -->
+      <div v-if="!isMini" class="flex items-center gap-3 px-2">
+        <UAvatar
+          :alt="authStore.currentUser?.username || 'U'"
           size="sm"
-          class="justify-center"
-          :class="isMini ? '' : 'shrink-0'"
-          to="/settings"
+          class="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold"
         />
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">
+            {{ authStore.currentUser?.username || 'User' }}
+          </p>
+          <p
+            class="text-[10px] text-gray-500 dark:text-gray-400 truncate tracking-tight uppercase"
+          >
+            Free Plan
+          </p>
+        </div>
       </div>
 
       <!-- Row 2: Theme + Notifications -->

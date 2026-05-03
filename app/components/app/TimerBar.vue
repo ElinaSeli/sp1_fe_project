@@ -34,6 +34,18 @@ const elapsedSeconds = ref(0)
 const toast = useToast()
 const timerBarFocused = ref(false)
 const descriptionInput = ref<HTMLInputElement | null>(null)
+const taskSelectOpen = ref(false)
+
+onMounted(() => {
+  window.addEventListener('app:focusTaskField', () => {
+    taskSelectOpen.value = true
+  })
+})
+onUnmounted(() => {
+  window.removeEventListener('app:focusTaskField', () => {
+    taskSelectOpen.value = true
+  })
+})
 const startButton = ref<{ $el?: HTMLElement; focus?: () => void } | null>(null)
 
 const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
@@ -95,17 +107,6 @@ watch(
   { immediate: true }
 )
 
-// Global shortcuts: Alt+T and /
-const onKeydown = (e: KeyboardEvent) => {
-  const isInput = ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)
-
-  // Alt+T or / (if not in an input)
-  if ((e.altKey && e.key === 't') || (e.key === '/' && !isInput)) {
-    e.preventDefault()
-    descriptionInput.value?.focus()
-  }
-}
-
 const startTracking = async () => {
   try {
     await timerStore.startTimer()
@@ -134,11 +135,9 @@ const stopTracking = async () => {
 
 onMounted(() => {
   timerStore.fetchActiveTimer()
-  window.addEventListener('keydown', onKeydown)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', onKeydown)
   if (tickerInterval) clearInterval(tickerInterval)
 })
 </script>
@@ -178,6 +177,7 @@ onUnmounted(() => {
       <input
         ref="descriptionInput"
         v-model="description"
+        data-focus="desc-field"
         placeholder="What are you working on? (Alt+T or /)"
         class="flex-1 min-w-[150px] bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 h-9 truncate"
       />
@@ -204,6 +204,7 @@ onUnmounted(() => {
 
         <USelectMenu
           v-model="selectedTaskId"
+          v-model:open="taskSelectOpen"
           :items="
             (tasks ?? []).filter((t) => !selectedProjectId || t.projectId === selectedProjectId)
           "
@@ -214,6 +215,7 @@ onUnmounted(() => {
         >
           <template #default>
             <UButton
+              data-focus="task-field"
               variant="ghost"
               color="neutral"
               icon="i-lucide-check-square"
