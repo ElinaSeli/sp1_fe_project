@@ -2,7 +2,6 @@
 // Delete when real BE is ready.
 
 import {
-  MOCK_TOKEN,
   MOCK_CREDENTIALS,
   MOCK_USER,
   MOCK_AUTH_RESPONSE,
@@ -53,7 +52,8 @@ export function handleMockRequest(
   authToken: string | null
 ): MockResponse {
   const token = authToken?.startsWith('Bearer ') ? authToken.slice(7).trim() : null
-  const validToken = token === MOCK_TOKEN
+  // Accept any non-empty bearer token — real BE now issues real JWTs, not MOCK_TOKEN.
+  const validToken = token !== null && token.length > 0
 
   // POST /login
   if (path === '/login' && method === 'POST') {
@@ -78,10 +78,7 @@ export function handleMockRequest(
   }
 
   if (!validToken) {
-    return err(
-      `Unauthorized. Received token: "${token ?? 'MISSING'}" (Expected: "${MOCK_TOKEN}")`,
-      401
-    )
+    return err(`Unauthorized. No bearer token received.`, 401)
   }
 
   // GET /api/users/me
