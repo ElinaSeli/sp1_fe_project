@@ -58,9 +58,25 @@ export default defineEventHandler(async (event) => {
       }
     }
   }
-  const authToken = getHeader(event, 'authorization') ?? null
+
+  const allHeaders = getHeaders(event)
+  let authToken = allHeaders['authorization'] ?? null
+
+  // Fallback to cookie if Authorization header is missing (common in local dev)
+  if (!authToken) {
+    const cookies = parseCookies(event)
+    const cookieToken = cookies['auth_token']
+    if (cookieToken) {
+      authToken = `Bearer ${cookieToken}`
+    }
+  }
 
   const { status, data } = handleMockRequest(path, method, body, authToken)
+
+  if (status === 401 && typeof data === 'object' && data !== null) {
+    ;(data as Record<string, unknown>).debugHeaders = allHeaders
+  }
+
   setResponseStatus(event, status)
   return data
 })

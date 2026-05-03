@@ -18,27 +18,46 @@ export function useApiClient() {
    * Core request helper used by all service methods.
    */
   async function request<T>(path: string, options: FetchOptions = {}): Promise<ServiceResponse<T>> {
-    // Read from the auth store's reactive ref — more reliable than re-reading the
-    // cookie directly, which can lag on non-standard origins (tauri://, file://).
-    const token = useAuthStore().token
+    const authStore = useAuthStore()
+
+    // Explicitly unref the token and ensure it's a string.
+    // useCookie in Nuxt 4 can return a Ref, and Pinia's auto-unwrapping
+    // sometimes behaves differently depending on how the store was created.
+    const tokenValue = toValue(authStore.token)
+
+    // Ensure we have a string token
+    const finalToken = typeof tokenValue === 'string' ? tokenValue : null
 
     // Ensure path doesn't have a leading slash if we're joining with baseURL
     const normalizedPath = path.startsWith('/') ? path.substring(1) : path
 
     try {
+      const headers: Record<string, string> = {
+        Accept: 'application/json'
+      }
+
+      if (finalToken) {
+        headers['Authorization'] = `Bearer ${finalToken}`
+      }
+
+      // Merge user-provided headers
+      if (options?.headers) {
+        const userHeaders = options.headers as Record<string, string>
+        for (const key in userHeaders) {
+          const val = userHeaders[key]
+          if (val !== undefined) {
+            headers[key] = val
+          }
+        }
+      }
+
       const data = await $fetch<T>(normalizedPath, {
         baseURL,
         ...options,
-        headers: {
-          Accept: 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(options?.headers ?? {})
-        }
+        headers
       })
       return { data, error: null }
     } catch (err: unknown) {
-      // Nuxt's $fetch throws a FetchError with a .data property when the server
-      // returns a non-2xx status code.
       const message =
         (err as { data?: { message?: string }; message?: string })?.data?.message ??
         (err as { message?: string })?.message ??

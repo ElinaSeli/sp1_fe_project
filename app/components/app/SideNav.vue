@@ -12,6 +12,9 @@ const colorMode = useColorMode()
 
 const navLinks = [
   { to: '/', icon: 'i-lucide-layout-dashboard', label: 'Dashboard' },
+  { to: '/projects', icon: 'i-lucide-folder', label: 'Projects' },
+  { to: '/issues', icon: 'i-lucide-list-checks', label: 'Issues' },
+  { to: '/tags', icon: 'i-lucide-tag', label: 'Tags' },
   { to: '/reports', icon: 'i-lucide-bar-chart-3', label: 'Reports' },
   { to: '/workspaces', icon: 'i-lucide-briefcase', label: 'Workspaces' },
   { to: '/integrations', icon: 'i-lucide-plug-2', label: 'Integrations' },
@@ -120,9 +123,7 @@ const onLogout = async () => {
           <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">
             {{ authStore.currentUser?.username || 'User' }}
           </p>
-          <p
-            class="text-[10px] text-gray-500 dark:text-gray-400 truncate tracking-tight uppercase"
-          >
+          <p class="text-[10px] text-gray-500 dark:text-gray-400 truncate tracking-tight uppercase">
             Free Plan
           </p>
         </div>

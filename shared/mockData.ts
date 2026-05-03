@@ -1,6 +1,8 @@
+import type { Project, Tag, Issue } from '../app/types'
+
 // [MOCK] Single source of truth for all mock data.
-// Imported by both server/middleware/01.mockApi.ts (dev) and app/plugins/mockApi.client.ts (Tauri prod).
-// Delete this file and those two when real BE is ready.
+// Imported by server/middleware/01.mockApi.ts (dev).
+// Delete this file and the middleware when real BE is ready.
 
 export const MOCK_TOKEN = 'mock.jwt.token-for-local-dev-only'
 export const MOCK_CREDENTIALS = { username: 'testuser', password: 'password123' }
@@ -35,22 +37,137 @@ export const MOCK_WORKSPACES = [
     createdAt: '2025-02-01T00:00:00Z'
   }
 ]
+// ---------------------------------------------------------------------------
+// Seed data (immutable constants)
+// ---------------------------------------------------------------------------
 
-export const MOCK_PROJECTS = [
-  { id: '00000000-0000-0000-0000-000000000020', name: 'Internal', color: 'emerald' },
-  { id: '00000000-0000-0000-0000-000000000021', name: 'Client A', color: 'blue' },
-  { id: '00000000-0000-0000-0000-000000000022', name: 'Open Source', color: 'purple' }
+const WORKSPACE_ID = '00000000-0000-0000-0000-000000000010'
+
+const SEED_PROJECTS: Project[] = [
+  {
+    id: '00000000-0000-0000-0000-000000000020',
+    workspaceId: WORKSPACE_ID,
+    name: 'Internal',
+    color: '#10b981',
+    isImported: false,
+    externalId: null
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000021',
+    workspaceId: WORKSPACE_ID,
+    name: 'Client A',
+    color: '#3b82f6',
+    isImported: false,
+    externalId: null
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000022',
+    workspaceId: WORKSPACE_ID,
+    name: 'Open Source',
+    color: '#8b5cf6',
+    isImported: false,
+    externalId: null
+  }
 ]
 
-export const MOCK_TASKS = [
-  { id: '00000000-0000-0000-0000-000000000040', name: 'Development', projectId: '00000000-0000-0000-0000-000000000020' },
-  { id: '00000000-0000-0000-0000-000000000041', name: 'Design', projectId: '00000000-0000-0000-0000-000000000020' },
-  { id: '00000000-0000-0000-0000-000000000042', name: 'Code Review', projectId: '00000000-0000-0000-0000-000000000020' },
-  { id: '00000000-0000-0000-0000-000000000043', name: 'Meeting', projectId: '00000000-0000-0000-0000-000000000021' },
-  { id: '00000000-0000-0000-0000-000000000044', name: 'Bug Fix', projectId: '00000000-0000-0000-0000-000000000022' }
+const SEED_TAGS: Tag[] = [
+  {
+    id: '00000000-0000-0000-0000-000000000050',
+    workspaceId: WORKSPACE_ID,
+    name: 'Engineering',
+    color: '#10b981',
+    isImported: false,
+    externalId: null
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000051',
+    workspaceId: WORKSPACE_ID,
+    name: 'Urgent',
+    color: '#ef4444',
+    isImported: false,
+    externalId: null
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000052',
+    workspaceId: WORKSPACE_ID,
+    name: 'Research',
+    color: '#f59e0b',
+    isImported: false,
+    externalId: null
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000053',
+    workspaceId: WORKSPACE_ID,
+    name: 'UI/UX',
+    color: '#6366f1',
+    isImported: false,
+    externalId: null
+  }
 ]
 
-export const MOCK_TAGS = ['Engineering', 'Urgent', 'Research', 'UI/UX']
+const SEED_ISSUES: Issue[] = [
+  {
+    id: '00000000-0000-0000-0000-000000000040',
+    workspaceId: WORKSPACE_ID,
+    projectId: '00000000-0000-0000-0000-000000000020',
+    name: 'Development',
+    isImported: false,
+    externalId: null
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000041',
+    workspaceId: WORKSPACE_ID,
+    projectId: '00000000-0000-0000-0000-000000000020',
+    name: 'Design',
+    isImported: false,
+    externalId: null
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000042',
+    workspaceId: WORKSPACE_ID,
+    projectId: '00000000-0000-0000-0000-000000000020',
+    name: 'Code Review',
+    isImported: false,
+    externalId: null
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000043',
+    workspaceId: WORKSPACE_ID,
+    projectId: '00000000-0000-0000-0000-000000000021',
+    name: 'Meeting',
+    isImported: false,
+    externalId: null
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000044',
+    workspaceId: WORKSPACE_ID,
+    projectId: '00000000-0000-0000-0000-000000000022',
+    name: 'Bug Fix',
+    isImported: false,
+    externalId: null
+  }
+]
+
+// ---------------------------------------------------------------------------
+// Mutable in-memory stores (POST handlers push into these)
+// ---------------------------------------------------------------------------
+
+export const mockStore = {
+  projects: [...SEED_PROJECTS],
+  tags: [...SEED_TAGS],
+  issues: [...SEED_ISSUES]
+}
+
+/** Reset all mock data to seed state (useful for tests) */
+export function resetMockData() {
+  mockStore.projects = [...SEED_PROJECTS]
+  mockStore.tags = [...SEED_TAGS]
+  mockStore.issues = [...SEED_ISSUES]
+}
+
+// ---------------------------------------------------------------------------
+// Time entries (unchanged)
+// ---------------------------------------------------------------------------
 
 export const MOCK_TIME_ENTRIES = [
   {
