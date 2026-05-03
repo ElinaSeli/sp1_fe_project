@@ -114,6 +114,35 @@ export function handleMockRequest(
     }
   }
 
+  // PUT/DELETE /api/workspaces/:wid/projects/:pid
+  const projectMatch = path.match(/^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)$/)
+  if (projectMatch) {
+    const projectId = projectMatch[2]!
+    const idx = mockStore.projects.findIndex((p) => p.id === projectId)
+
+    if (method === 'PUT') {
+      if (idx === -1) return err('Project not found', 404)
+      const existing = mockStore.projects[idx]!
+      if (existing.isImported) return err('Cannot edit an imported project', 403)
+      if (!body.name || typeof body.name !== 'string') return err('name is required', 422)
+      const updated = {
+        ...existing,
+        name: body.name,
+        color: (body.color as string | null) ?? existing.color
+      }
+      mockStore.projects[idx] = updated
+      return ok(updated)
+    }
+
+    if (method === 'DELETE') {
+      if (idx === -1) return err('Project not found', 404)
+      const existing = mockStore.projects[idx]!
+      if (existing.isImported) return err('Cannot delete an imported project', 403)
+      mockStore.projects.splice(idx, 1)
+      return ok(null, 204)
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Tags
   // ---------------------------------------------------------------------------
