@@ -2,15 +2,12 @@
 // Delete when real BE is ready.
 
 import {
-  MOCK_TOKEN,
   MOCK_CREDENTIALS,
   MOCK_USER,
   MOCK_AUTH_RESPONSE,
   MOCK_WORKSPACES,
-  MOCK_PROJECTS,
-  MOCK_TASKS,
-  MOCK_TAGS,
-  MOCK_TIME_ENTRIES
+  MOCK_TIME_ENTRIES,
+  mockStore
 } from '#shared/mockData'
 
 export interface MockResponse {
@@ -40,17 +37,30 @@ function err(message: string, status: number): MockResponse {
   return { status, data: { message } }
 }
 
+function randomUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
 export function handleMockRequest(
   path: string,
   method: string,
   body: Record<string, unknown>,
   authToken: string | null
 ): MockResponse {
-  const validToken = authToken?.startsWith('Bearer ') && authToken.slice(7) === MOCK_TOKEN
+  const token = authToken?.startsWith('Bearer ') ? authToken.slice(7).trim() : null
+  // Accept any non-empty bearer token — real BE now issues real JWTs, not MOCK_TOKEN.
+  const validToken = token !== null && token.length > 0
 
   // POST /login
   if (path === '/login' && method === 'POST') {
-    if (body.username !== MOCK_CREDENTIALS.username || body.password !== MOCK_CREDENTIALS.password) {
+    if (
+      body.username !== MOCK_CREDENTIALS.username ||
+      body.password !== MOCK_CREDENTIALS.password
+    ) {
       return err('Invalid credentials', 401)
     }
     return ok(MOCK_AUTH_RESPONSE)
@@ -67,7 +77,9 @@ export function handleMockRequest(
     return ok(null, 201)
   }
 
-  if (!validToken) return err('Unauthorized', 401)
+  if (!validToken) {
+    return err(`Unauthorized. No bearer token received.`, 401)
+  }
 
   // GET /api/users/me
   if (path === '/api/users/me' && method === 'GET') return ok(MOCK_USER)
@@ -75,11 +87,114 @@ export function handleMockRequest(
   // GET /api/workspaces
   if (path === '/api/workspaces' && method === 'GET') return ok(MOCK_WORKSPACES)
 
-  // Workspace-scoped routes
-  if (/^\/api\/workspaces\/[^/]+\/projects$/.test(path) && method === 'GET') return ok(MOCK_PROJECTS)
-  if (/^\/api\/workspaces\/[^/]+\/tasks$/.test(path) && method === 'GET') return ok(MOCK_TASKS)
-  if (/^\/api\/workspaces\/[^/]+\/tags$/.test(path) && method === 'GET') return ok(MOCK_TAGS)
-  if (/^\/api\/workspaces\/[^/]+\/entries$/.test(path) && method === 'GET') return ok(MOCK_TIME_ENTRIES)
+  // ---------------------------------------------------------------------------
+  // Projects
+  // ---------------------------------------------------------------------------
+  const projectsMatch = path.match(/^\/api\/workspaces\/([^/]+)\/projects$/)
+  if (projectsMatch) {
+    const workspaceId = projectsMatch[1]!
+    if (method === 'GET') {
+      return ok(mockStore.projects.filter((p) => p.workspaceId === workspaceId || true))
+    }
+    if (method === 'POST') {
+      if (!body.name || typeof body.name !== 'string') return err('name is required', 422)
+      const project = {
+        id: randomUUID(),
+        workspaceId,
+        name: body.name,
+        color: (body.color as string | null) ?? null,
+        isImported: false,
+        externalId: null
+      }
+      mockStore.projects.push(project)
+      return ok(project, 201)
+    }
+  }
+
+  // PUT/DELETE /api/workspaces/:wid/projects/:pid
+  const projectMatch = path.match(/^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)$/)
+  if (projectMatch) {
+    const projectId = projectMatch[2]!
+    const idx = mockStore.projects.findIndex((p) => p.id === projectId)
+
+    if (method === 'PUT') {
+      if (idx === -1) return err('Project not found', 404)
+      const existing = mockStore.projects[idx]!
+      if (existing.isImported) return err('Cannot edit an imported project', 403)
+      if (!body.name || typeof body.name !== 'string') return err('name is required', 422)
+      const updated = {
+        ...existing,
+        name: body.name,
+        color: (body.color as string | null) ?? existing.color
+      }
+      mockStore.projects[idx] = updated
+      return ok(updated)
+    }
+
+    if (method === 'DELETE') {
+      if (idx === -1) return err('Project not found', 404)
+      const existing = mockStore.projects[idx]!
+      if (existing.isImported) return err('Cannot delete an imported project', 403)
+      mockStore.projects.splice(idx, 1)
+      return ok(null, 204)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tags
+  // ---------------------------------------------------------------------------
+  const tagsMatch = path.match(/^\/api\/workspaces\/([^/]+)\/tags$/)
+  if (tagsMatch) {
+    const workspaceId = tagsMatch[1]!
+    if (method === 'GET') {
+      return ok(mockStore.tags.filter((t) => t.workspaceId === workspaceId || true))
+    }
+    if (method === 'POST') {
+      if (!body.name || typeof body.name !== 'string') return err('name is required', 422)
+      const tag = {
+        id: randomUUID(),
+        workspaceId,
+        name: body.name,
+        color: (body.color as string | null) ?? null,
+        isImported: false,
+        externalId: null
+      }
+      mockStore.tags.push(tag)
+      return ok(tag, 201)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Issues / Tasks
+  // ---------------------------------------------------------------------------
+  const issuesMatch = path.match(/^\/api\/workspaces\/([^/]+)\/(issues|tasks)$/)
+  if (issuesMatch) {
+    const workspaceId = issuesMatch[1]!
+    if (method === 'GET') {
+      return ok(mockStore.issues.filter((i) => i.workspaceId === workspaceId || true))
+    }
+    if (method === 'POST') {
+      if (!body.name || typeof body.name !== 'string') return err('name is required', 422)
+      // Accept either projectId or the old taskId if applicable
+      const projectId = (body.projectId as string) || (body.taskId as string)
+      if (!projectId) return err('projectId is required', 422)
+      const issue = {
+        id: randomUUID(),
+        workspaceId,
+        projectId,
+        name: body.name,
+        isImported: false,
+        externalId: null
+      }
+      mockStore.issues.push(issue)
+      return ok(issue, 201)
+    }
+  }
+
+  // Time entries (legacy GET)
+  if (/^\/api\/workspaces\/[^/]+\/entries$/.test(path) && method === 'GET') {
+    return ok(MOCK_TIME_ENTRIES)
+  }
 
   // Timer routes
   const timerMatch = path.match(/^\/api\/workspaces\/[^/]+\/timer(\/start|\/stop)?$/)
@@ -108,7 +223,11 @@ export function handleMockRequest(
 
     if (sub === '/stop' && method === 'POST') {
       if (!activeTimer) return err('No active timer', 404)
-      const stopped = { ...activeTimer, timeEnd: new Date().toISOString(), timeEntryState: 'VALIDATED' }
+      const stopped = {
+        ...activeTimer,
+        timeEnd: new Date().toISOString(),
+        timeEntryState: 'VALIDATED'
+      }
       activeTimer = null
       return ok(stopped)
     }

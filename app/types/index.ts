@@ -64,25 +64,53 @@ export interface CreateWorkspaceRequest {
 }
 
 // ---------------------------------------------------------------------------
-// Project / Task / Tag
+// Project / Issue / Tag  (aligned with Micronaut backend DTOs)
 // ---------------------------------------------------------------------------
 
 export interface Project {
   id: string
+  workspaceId: string
   name: string
-  color?: string
+  color?: string | null
+  isImported: boolean
+  externalId?: string | null
 }
 
-export interface Task {
-  id: string
+export interface CreateProjectRequest {
   name: string
+  color?: string | null
+}
+
+export interface Issue {
+  id: string
+  workspaceId: string
   projectId: string
+  name: string
+  isImported: boolean
+  externalId?: string | null
+}
+
+export interface CreateIssueRequest {
+  projectId: string
+  name: string
 }
 
 export interface Tag {
   id: string
+  workspaceId: string
   name: string
+  color?: string | null
+  isImported: boolean
+  externalId?: string | null
 }
+
+export interface CreateTagRequest {
+  name: string
+  color?: string | null
+}
+
+/** @deprecated Use Issue instead — kept for timer store backward-compat */
+export type Task = Issue
 
 // ---------------------------------------------------------------------------
 // Time Entries

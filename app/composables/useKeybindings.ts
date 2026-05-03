@@ -1,5 +1,4 @@
 import type { KeybindingActionId } from '~/types'
-import { register, unregister } from '@tauri-apps/plugin-global-shortcut'
 
 function buildKeyString(e: KeyboardEvent): string {
   const parts: string[] = []
@@ -94,6 +93,11 @@ export function useKeybindings() {
   let registeredKeys: string[] = []
 
   async function registerTauri() {
+    // Use a variable so Vite's static analysis cannot resolve this at build time.
+    // This package is only available inside the Tauri runtime — never in the browser.
+    const tauriShortcutPkg = '@tauri-apps/plugin-global-shortcut'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { register, unregister } = (await import(/* @vite-ignore */ tauriShortcutPkg)) as any
     for (const k of registeredKeys) {
       try {
         await unregister(k)
@@ -124,6 +128,9 @@ export function useKeybindings() {
   }
 
   async function unregisterAllTauri() {
+    const tauriShortcutPkg = '@tauri-apps/plugin-global-shortcut'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { unregister } = (await import(/* @vite-ignore */ tauriShortcutPkg)) as any
     for (const k of registeredKeys) {
       try {
         await unregister(k)

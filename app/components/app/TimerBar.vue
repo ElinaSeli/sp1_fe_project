@@ -1,6 +1,9 @@
 <script setup lang="ts">
 const timerStore = useTimerStore()
 const workspacesStore = useWorkspacesStore()
+const projectsStore = useProjectsStore()
+const issuesStore = useIssuesStore()
+const tagsStore = useTagsStore()
 
 const description = computed({
   get: () => timerStore.draftEntry.description,
@@ -21,7 +24,7 @@ const selectedTaskId = computed({
   }
 })
 const selectedTag = computed({
-  get: () => timerStore.draftEntry.tagIds[0] || '',
+  get: () => timerStore.draftEntry.tagIds[0] || undefined,
   set: (v: string) => {
     timerStore.draftEntry.tagIds = v ? [v] : []
   }
@@ -35,49 +38,32 @@ const toast = useToast()
 const timerBarFocused = ref(false)
 const descriptionInput = ref<HTMLInputElement | null>(null)
 const taskSelectOpen = ref(false)
+const onFocusTaskField = () => {
+  taskSelectOpen.value = true
+}
 
 onMounted(() => {
-  window.addEventListener('app:focusTaskField', () => {
-    taskSelectOpen.value = true
-  })
+  window.addEventListener('app:focusTaskField', onFocusTaskField)
 })
 onUnmounted(() => {
-  window.removeEventListener('app:focusTaskField', () => {
-    taskSelectOpen.value = true
-  })
+  window.removeEventListener('app:focusTaskField', onFocusTaskField)
 })
 const startButton = ref<{ $el?: HTMLElement; focus?: () => void } | null>(null)
 
 const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
-
-const { data: projects, execute: fetchProjects } = useFetch<
-  { id: string; name: string; color: string }[]
->(() => `/api-proxy/api/workspaces/${workspaceId.value}/projects`, {
-  immediate: false,
-  watch: false,
-  default: () => []
-})
-
-const { data: tasks, execute: fetchTasks } = useFetch<
-  { id: string; name: string; projectId: string }[]
->(() => `/api-proxy/api/workspaces/${workspaceId.value}/tasks`, {
-  immediate: false,
-  watch: false,
-  default: () => []
-})
-
-const { data: tags, execute: fetchTags } = useFetch<string[]>(
-  () => `/api-proxy/api/workspaces/${workspaceId.value}/tags`,
-  { immediate: false, watch: false, default: () => [] }
-)
+const projects = computed(() => projectsStore.projects)
+const issues = computed(() => issuesStore.issues)
+const tags = computed(() => tagsStore.tags)
 
 watch(
   workspaceId,
-  (id) => {
+  async (id) => {
     if (id) {
-      fetchProjects()
-      fetchTasks()
-      fetchTags()
+      await Promise.all([
+        projectsStore.fetchProjects(),
+        issuesStore.fetchIssues(),
+        tagsStore.fetchTags()
+      ])
     }
   },
   { immediate: true }
@@ -134,6 +120,7 @@ const stopTracking = async () => {
 }
 
 onMounted(() => {
+  workspacesStore.fetchWorkspaces()
   timerStore.fetchActiveTimer()
 })
 
@@ -206,7 +193,9 @@ onUnmounted(() => {
           v-model="selectedTaskId"
           v-model:open="taskSelectOpen"
           :items="
-            (tasks ?? []).filter((t) => !selectedProjectId || t.projectId === selectedProjectId)
+            (issues ?? []).filter(
+              (issue) => !selectedProjectId || issue.projectId === selectedProjectId
+            )
           "
           value-key="id"
           label-key="name"
@@ -219,19 +208,26 @@ onUnmounted(() => {
               variant="ghost"
               color="neutral"
               icon="i-lucide-check-square"
-              :label="tasks?.find((t) => t.id === selectedTaskId)?.name || 'Task'"
+              :label="issues?.find((issue) => issue.id === selectedTaskId)?.name || 'Task'"
               class="max-w-[120px] truncate"
             />
           </template>
         </USelectMenu>
 
-        <USelectMenu v-model="selectedTag" :items="tags ?? []" placeholder="Tags" size="xs">
+        <USelectMenu
+          v-model="selectedTag"
+          :items="tags ?? []"
+          value-key="id"
+          label-key="name"
+          placeholder="Tags"
+          size="xs"
+        >
           <template #default>
             <UButton
               variant="ghost"
               color="neutral"
               icon="i-lucide-tag"
-              :label="selectedTag ? selectedTag : 'Tags'"
+              :label="tags?.find((tag) => tag.id === selectedTag)?.name || 'Tags'"
               class="max-w-[120px] truncate"
             />
           </template>
