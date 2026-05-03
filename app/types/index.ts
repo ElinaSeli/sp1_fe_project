@@ -41,10 +41,10 @@ export interface MembershipResponse {
 
 export interface AuthResponse {
   username: string
-  roles: string[]
   access_token: string
   token_type: string
-  expires_in: number
+  expires_in?: number | null
+  refresh_token?: string | null
 }
 
 // ---------------------------------------------------------------------------

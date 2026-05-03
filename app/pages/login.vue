@@ -43,17 +43,12 @@ async function onLogin() {
         errorMsg.value = response.error
       }
     } else if (response.data?.access_token) {
-      authStore.setSession(response.data.access_token, response.data.expires_in)
+      authStore.setSession(response.data.access_token, response.data.expires_in ?? undefined)
       await nextTick()
 
-      const profileResponse = await authStore.fetchUserProfile()
-
-      if (profileResponse.error) {
-        errorMsg.value = 'Failed to load user profile: ' + profileResponse.error
-      } else {
-        await useWorkspacesStore().fetchWorkspaces()
-        await router.push('/')
-      }
+      await authStore.fetchUserProfile()
+      await useWorkspacesStore().fetchWorkspaces()
+      await router.push('/')
     } else {
       errorMsg.value = 'Invalid response from server'
     }
