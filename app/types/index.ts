@@ -168,8 +168,12 @@ export interface UpdateTimeEntryRequest {
 export interface Integration {
   id: string
   name: string
+  userId: string
+  workspaceId: string
   url: string
   apiKey: string
+  status: 'active' | 'inactive'
+  createdAt: string
 }
 
 export interface IntegrationRequest {
@@ -203,6 +207,7 @@ export type KeybindingActionId =
   | 'editLastEntry'
   | 'newTimeEntry'
   | 'createNew'
+  | 'toggleSidebar'
 
 export type KeybindingCategory = 'timer' | 'navigation' | 'timeEntry' | 'special'
 

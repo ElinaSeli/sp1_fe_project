@@ -11,22 +11,50 @@ const description = computed({
     timerStore.draftEntry.description = v
   }
 })
-const selectedProjectId = computed({
-  get: () => timerStore.draftEntry.projectId || undefined,
-  set: (v) => {
-    timerStore.draftEntry.projectId = v || null
+
+// --- Defensive Mapping for Combobox ---
+const projects = computed(() =>
+  Array.isArray(projectsStore.projects) ? projectsStore.projects : []
+)
+const availableProjects = computed(() => projects.value.map((p) => p.name))
+const activeProjectName = computed({
+  get: () => projects.value.find((p) => p.id === timerStore.draftEntry.projectId)?.name || '',
+  set: (name: string) => {
+    const p = projects.value.find((x) => x.name === name)
+    timerStore.draftEntry.projectId = p ? p.id : null
   }
 })
-const selectedTaskId = computed({
-  get: () => timerStore.draftEntry.issueId || undefined,
-  set: (v) => {
-    timerStore.draftEntry.issueId = v || null
+
+const issues = computed(() => {
+  const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
+  if (!timerStore.draftEntry.projectId) return all.map((i) => i.name)
+  return all.filter((i) => i.projectId === timerStore.draftEntry.projectId).map((i) => i.name)
+})
+const activeIssueName = computed({
+  get: () => {
+    const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
+    return all.find((i) => i.id === timerStore.draftEntry.issueId)?.name || ''
+  },
+  set: (name: string) => {
+    const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
+    const i = all.find((x) => x.name === name)
+    timerStore.draftEntry.issueId = i ? i.id : null
   }
 })
-const selectedTag = computed({
-  get: () => timerStore.draftEntry.tagIds[0] || undefined,
-  set: (v: string) => {
-    timerStore.draftEntry.tagIds = v ? [v] : []
+
+const allTags = computed(() => (Array.isArray(tagsStore.tags) ? tagsStore.tags : []))
+const availableTags = computed(() => allTags.value.map((t) => t.name))
+const selectedTagNames = computed({
+  get: () => {
+    const currentIds = timerStore.draftEntry.tagIds || []
+    return currentIds
+      .map((id) => allTags.value.find((t) => t.id === id)?.name)
+      .filter(Boolean) as string[]
+  },
+  set: (names: string[]) => {
+    timerStore.draftEntry.tagIds = names
+      .map((n) => allTags.value.find((t) => t.name === n)?.id)
+      .filter(Boolean) as string[]
   }
 })
 
@@ -37,23 +65,15 @@ const elapsedSeconds = ref(0)
 const toast = useToast()
 const timerBarFocused = ref(false)
 const descriptionInput = ref<HTMLInputElement | null>(null)
-const taskSelectOpen = ref(false)
-const onFocusTaskField = () => {
-  taskSelectOpen.value = true
+
+const onTimerBarFocusout = (e: FocusEvent) => {
+  const currentTarget = e.currentTarget as Node | null
+  if (currentTarget && !currentTarget.contains(e.relatedTarget as Node)) {
+    timerBarFocused.value = false
+  }
 }
 
-onMounted(() => {
-  window.addEventListener('app:focusTaskField', onFocusTaskField)
-})
-onUnmounted(() => {
-  window.removeEventListener('app:focusTaskField', onFocusTaskField)
-})
-const startButton = ref<{ $el?: HTMLElement; focus?: () => void } | null>(null)
-
 const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
-const projects = computed(() => projectsStore.projects)
-const issues = computed(() => issuesStore.issues)
-const tags = computed(() => tagsStore.tags)
 
 watch(
   workspaceId,
@@ -131,107 +151,62 @@ onUnmounted(() => {
 
 <template>
   <header
-    class="h-16 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 flex items-center justify-between px-4 shrink-0 shadow-sm z-20 border-b border-gray-200 dark:border-gray-800"
+    class="min-h-16 h-auto py-2 md:py-0 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 flex flex-wrap items-center justify-between px-4 shrink-0 shadow-sm z-20 border-b border-gray-200 dark:border-gray-800"
   >
-    <!-- Left: Status Indicator -->
-    <div class="flex items-center w-32 shrink-0">
-      <div
-        class="w-2 h-2 rounded-full mr-3"
-        :class="
-          isRunning
-            ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]'
-            : 'bg-gray-300 dark:bg-gray-600'
-        "
-      />
-      <span
-        class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
-      >
-        {{ isRunning ? 'Tracking' : 'Idle' }}
-      </span>
-    </div>
-
     <!-- Middle: Input Bar (Keyboard First) -->
     <div
-      class="flex-1 min-w-0 max-w-5xl flex items-center gap-2 px-3 py-1 mx-2 sm:mx-4 rounded-lg border transition-all duration-300"
+      class="flex-1 w-full md:w-auto order-last md:order-none mt-3 md:mt-0 flex flex-col md:flex-row items-center flex-wrap gap-x-1 gap-y-2 px-3 py-2 mx-0 sm:mx-4 rounded-lg border transition-all duration-300"
       :class="
         timerBarFocused
           ? 'border-emerald-500/50 bg-white dark:bg-gray-800 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
           : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40'
       "
       @focusin="timerBarFocused = true"
-      @focusout="timerBarFocused = false"
+      @focusout="onTimerBarFocusout"
     >
-      <input
-        ref="descriptionInput"
-        v-model="description"
-        data-focus="desc-field"
-        placeholder="What are you working on? (Alt+T or /)"
-        class="flex-1 min-w-[150px] bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 h-9 truncate"
-      />
+      <!-- Group 1: Description + Project -->
+      <div class="flex w-full md:w-auto flex-1 items-center gap-1">
+        <input
+          ref="descriptionInput"
+          v-model="description"
+          data-focus="desc-field"
+          placeholder="What are you working on? (Alt+T or /)"
+          class="flex-1 min-w-[150px] bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 h-9 truncate"
+        />
 
-      <div class="flex-shrink min-w-0 hidden lg:flex items-center space-x-2">
-        <USelectMenu
-          v-model="selectedProjectId"
-          :items="projects ?? []"
-          value-key="id"
-          label-key="name"
+        <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
+
+        <AppComboboxInput
+          v-model="activeProjectName"
+          :options="availableProjects"
           placeholder="Project"
-          size="xs"
-        >
-          <template #default>
-            <UButton
-              variant="ghost"
-              color="neutral"
-              icon="i-lucide-folder"
-              :label="projects?.find((p) => p.id === selectedProjectId)?.name || 'Project'"
-              class="max-w-[120px] truncate"
-            />
-          </template>
-        </USelectMenu>
+          :dark="true"
+          class="flex-1 min-w-[130px] md:w-32 lg:w-40"
+        />
+      </div>
 
-        <USelectMenu
-          v-model="selectedTaskId"
-          v-model:open="taskSelectOpen"
-          :items="
-            (issues ?? []).filter(
-              (issue) => !selectedProjectId || issue.projectId === selectedProjectId
-            )
-          "
-          value-key="id"
-          label-key="name"
+      <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
+
+      <!-- Group 2: Task + Tags -->
+      <div class="flex w-full md:w-auto items-center gap-1">
+        <AppComboboxInput
+          v-model="activeIssueName"
+          :options="issues"
           placeholder="Task"
-          size="xs"
-        >
-          <template #default>
-            <UButton
-              data-focus="task-field"
-              variant="ghost"
-              color="neutral"
-              icon="i-lucide-check-square"
-              :label="issues?.find((issue) => issue.id === selectedTaskId)?.name || 'Task'"
-              class="max-w-[120px] truncate"
-            />
-          </template>
-        </USelectMenu>
+          :dark="true"
+          class="flex-1 min-w-[130px] md:w-32 lg:w-40"
+        />
 
-        <USelectMenu
-          v-model="selectedTag"
-          :items="tags ?? []"
-          value-key="id"
-          label-key="name"
+        <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
+
+        <AppComboboxInput
+          v-model="selectedTagNames"
+          :options="availableTags"
           placeholder="Tags"
-          size="xs"
-        >
-          <template #default>
-            <UButton
-              variant="ghost"
-              color="neutral"
-              icon="i-lucide-tag"
-              :label="tags?.find((tag) => tag.id === selectedTag)?.name || 'Tags'"
-              class="max-w-[120px] truncate"
-            />
-          </template>
-        </USelectMenu>
+          :multiple="true"
+          :dark="true"
+          class="flex-1 min-w-[100px] md:w-32 lg:w-40"
+        />
       </div>
     </div>
 
@@ -244,7 +219,6 @@ onUnmounted(() => {
       </div>
 
       <UButton
-        ref="startButton"
         :icon="isRunning ? 'i-lucide-square' : 'i-lucide-play'"
         :color="isRunning ? 'error' : 'primary'"
         :loading="isStarting || isStopping"

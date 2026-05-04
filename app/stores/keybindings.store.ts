@@ -62,6 +62,12 @@ export const KEYBINDING_ACTIONS: KeybindingAction[] = [
     // TODO: maps to whichever "create new" button is visible in the current context
     description: 'Activate the primary "create new" button on the current screen',
     category: 'special'
+  },
+  {
+    id: 'toggleSidebar',
+    label: 'Toggle sidebar',
+    description: 'Show or hide the sidebar navigation',
+    category: 'navigation'
   }
 ]
 
@@ -73,15 +79,16 @@ export const DEFAULT_BINDINGS: Record<KeybindingActionId, KeybindingBinding> = {
   resumeLast: { key: 'Alt+R', enabled: true },
   goToDashboard: { key: 'Alt+D', enabled: true },
   focusTaskField: { key: 'Alt+T', enabled: true },
-  focusDescField: { key: 'Alt+I', enabled: true },
+  focusDescField: { key: '/', enabled: true },
   editLastEntry: { key: 'Alt+L', enabled: true },
   newTimeEntry: { key: 'Alt+N', enabled: true },
-  createNew: { key: 'Alt+C', enabled: true }
+  createNew: { key: 'Alt+C', enabled: true },
+  toggleSidebar: { key: '[', enabled: true }
 }
 
 export const useKeybindingsStore = defineStore(
   // version bump forces a clean reset of old persisted string-shape bindings
-  'keybindings-v2',
+  'keybindings-v3',
   () => {
     const bindings = ref<Record<KeybindingActionId, KeybindingBinding>>({ ...DEFAULT_BINDINGS })
 
