@@ -15,6 +15,8 @@ export function useApiClient() {
     const finalToken = typeof tokenValue === 'string' ? tokenValue : null
 
     // Normalize path and prevent double /api if baseURL is already /api
+    // TODO: When deployed behind Nginx, relative paths starting with '/api'
+    // will be handled by the reverse proxy, bypassing CORS.
     let normalizedPath = path.startsWith('/') ? path.substring(1) : path
     if (baseURL.endsWith('/api') && normalizedPath.startsWith('api/')) {
       normalizedPath = normalizedPath.substring(4)
