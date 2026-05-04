@@ -167,12 +167,25 @@ export interface UpdateTimeEntryRequest {
 
 export interface Integration {
   id: string
-  userId: string
-  workspaceId: string
+  name: string
   url: string
   apiKey: string
-  status: 'active' | 'inactive'
-  createdAt: string
+}
+
+export interface IntegrationRequest {
+  name: string
+  url: string
+  apiKey: string
+}
+
+export interface TestConnectionRequest {
+  url: string
+  apiKey: string
+}
+
+export interface TestConnectionResponse {
+  success: boolean
+  message: string
 }
 
 // ---------------------------------------------------------------------------
