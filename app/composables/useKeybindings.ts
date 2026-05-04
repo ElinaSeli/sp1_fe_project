@@ -57,7 +57,8 @@ const ACTION_HANDLERS: Record<KeybindingActionId, () => void> = {
   focusDescField: () => document.querySelector<HTMLElement>('[data-focus="desc-field"]')?.focus(),
   editLastEntry: () => window.dispatchEvent(new CustomEvent('app:editLastTimeEntry')),
   newTimeEntry: () => window.dispatchEvent(new CustomEvent('app:openNewTimeEntry')),
-  createNew: () => window.dispatchEvent(new CustomEvent('app:createNew'))
+  createNew: () => window.dispatchEvent(new CustomEvent('app:createNew')),
+  toggleSidebar: () => window.dispatchEvent(new CustomEvent('app:toggleSidebar'))
 }
 
 // Actions that should fire even when an input element is focused
@@ -77,12 +78,21 @@ export function useKeybindings() {
 
     const target = e.target as HTMLElement
     const inInput = ['INPUT', 'TEXTAREA'].includes(target.tagName)
+    const isContentEditable = target.isContentEditable
 
     const ids = Object.keys(store.bindings) as KeybindingActionId[]
     for (const id of ids) {
       const binding = store.bindings[id]
       if (!binding.enabled || !binding.key || binding.key !== pressed) continue
-      if (inInput && !FOCUS_ACTIONS.has(id)) continue
+
+      // If we are already typing in an input, don't trigger shortcuts unless they are explicitly allowed
+      if (inInput || isContentEditable) {
+        if (!FOCUS_ACTIONS.has(id)) continue
+        // If the shortcut is to focus a field, but we are already IN that field, let the character type normally
+        if (id === 'focusDescField' && target.dataset.focus === 'desc-field') continue
+        if (id === 'focusTaskField' && target.dataset.focus === 'task-field') continue
+      }
+
       e.preventDefault()
       ACTION_HANDLERS[id]()
     }

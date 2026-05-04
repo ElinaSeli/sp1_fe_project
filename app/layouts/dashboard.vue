@@ -11,6 +11,11 @@ onMounted(async () => {
   if (!workspacesStore.workspaces.length) {
     await workspacesStore.fetchWorkspaces()
   }
+  window.addEventListener('app:toggleSidebar', toggleMini)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('app:toggleSidebar', toggleMini)
 })
 </script>
 

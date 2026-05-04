@@ -203,6 +203,7 @@ export type KeybindingActionId =
   | 'editLastEntry'
   | 'newTimeEntry'
   | 'createNew'
+  | 'toggleSidebar'
 
 export type KeybindingCategory = 'timer' | 'navigation' | 'timeEntry' | 'special'
 
