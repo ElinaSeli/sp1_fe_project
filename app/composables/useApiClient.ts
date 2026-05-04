@@ -3,11 +3,9 @@ import type { ServiceResponse } from '~/types'
 type FetchOptions = Parameters<typeof $fetch>[1]
 
 export function useApiClient() {
-  const {
-    public: { apiBaseUrl }
-  } = useRuntimeConfig()
-  if (!apiBaseUrl) throw new Error('NUXT_PUBLIC_API_BASE_URL is not set — check your .env')
-  const baseURL = apiBaseUrl as string
+  // Use the local Vite proxy path to avoid CORS.
+  // The proxy forwards /api-proxy/* → backend, stripping the prefix.
+  const baseURL = '/api-proxy'
 
   async function request<T>(path: string, options: FetchOptions = {}): Promise<ServiceResponse<T>> {
     const authStore = useAuthStore()
