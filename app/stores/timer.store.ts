@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { timerService } from '~/services/timer.service'
+import { timeEntriesService } from '~/services/timeEntries.service'
 import type { TimeEntryViewModel } from '~/types'
 
 export const useTimerStore = defineStore(
@@ -14,7 +15,7 @@ export const useTimerStore = defineStore(
     const draftEntry = ref({
       description: '',
       projectId: null as string | null,
-      taskId: null as string | null,
+      issueId: null as string | null,
       tagIds: [] as string[]
     })
 
@@ -24,7 +25,7 @@ export const useTimerStore = defineStore(
       const workspacesStore = useWorkspacesStore()
       if (!workspacesStore.activeWorkspaceId) return
 
-      const response = await timerService.getEntries(workspacesStore.activeWorkspaceId)
+      const response = await timeEntriesService.getAll(workspacesStore.activeWorkspaceId)
       if (response.data) {
         entries.value = response.data.map((e) => ({
           id: e.id,
@@ -49,7 +50,7 @@ export const useTimerStore = defineStore(
         startTimestamp.value = new Date(response.data.timeStart).getTime()
         draftEntry.value.description = response.data.description || ''
         draftEntry.value.projectId = response.data.projectId
-        draftEntry.value.taskId = response.data.issueId || null
+        draftEntry.value.issueId = response.data.issueId || null
         draftEntry.value.tagIds = response.data.tagIds || []
       } else {
         isRunning.value = false
@@ -66,10 +67,9 @@ export const useTimerStore = defineStore(
       isStarting.value = true
       try {
         const response = await timerService.start(workspacesStore.activeWorkspaceId, {
-          description: draftEntry.value.description,
+          description: draftEntry.value.description || null,
           projectId: draftEntry.value.projectId,
-          taskId: draftEntry.value.taskId || undefined,
-          tagIds: draftEntry.value.tagIds
+          issueId: draftEntry.value.issueId || null
         })
 
         if (response.data) {
@@ -121,7 +121,7 @@ export const useTimerStore = defineStore(
       draftEntry.value = {
         description: '',
         projectId: null,
-        taskId: null,
+        issueId: null,
         tagIds: []
       }
     }

@@ -33,23 +33,8 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-01-15',
 
   nitro: {
-      preset: 'static'
+    preset: 'static'
   },
-
-  // [MOCK MODE] No proxy — server/middleware/01.mockApi.ts intercepts /api-proxy/*.
-  // When real BE is ready: delete server/, uncomment the vite proxy below.
-  //
-  // vite: {
-  //   server: {
-  //     proxy: {
-  //       '/api-proxy': {
-  //         target: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://3.122.251.179:8080',
-  //         changeOrigin: true,
-  //         rewrite: (path: string) => path.replace(/^\/api-proxy/, '')
-  //       }
-  //     }
-  //   }
-  // },
 
   eslint: {
     config: {
@@ -58,5 +43,5 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
-  },
+  }
 })

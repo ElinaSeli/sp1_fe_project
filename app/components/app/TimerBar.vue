@@ -18,9 +18,9 @@ const selectedProjectId = computed({
   }
 })
 const selectedTaskId = computed({
-  get: () => timerStore.draftEntry.taskId || undefined,
+  get: () => timerStore.draftEntry.issueId || undefined,
   set: (v) => {
-    timerStore.draftEntry.taskId = v || null
+    timerStore.draftEntry.issueId = v || null
   }
 })
 const selectedTag = computed({

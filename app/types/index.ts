@@ -147,7 +147,7 @@ export interface CreateTimeEntryRequest {
 }
 
 export interface StartTimerRequest {
-  projectId: string
+  projectId?: string | null
   issueId?: string | null
   description?: string | null
 }
