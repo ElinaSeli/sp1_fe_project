@@ -153,23 +153,6 @@ onUnmounted(() => {
   <header
     class="min-h-16 h-auto py-2 md:py-0 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 flex flex-wrap items-center justify-between px-4 shrink-0 shadow-sm z-20 border-b border-gray-200 dark:border-gray-800"
   >
-    <!-- Left: Status Indicator -->
-    <div class="flex items-center w-32 shrink-0">
-      <div
-        class="w-2 h-2 rounded-full mr-3"
-        :class="
-          isRunning
-            ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]'
-            : 'bg-gray-300 dark:bg-gray-600'
-        "
-      />
-      <span
-        class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
-      >
-        {{ isRunning ? 'Tracking' : 'Idle' }}
-      </span>
-    </div>
-
     <!-- Middle: Input Bar (Keyboard First) -->
     <div
       class="flex-1 w-full md:w-auto order-last md:order-none mt-3 md:mt-0 flex flex-col md:flex-row items-center flex-wrap gap-x-1 gap-y-2 px-3 py-2 mx-0 sm:mx-4 rounded-lg border transition-all duration-300"

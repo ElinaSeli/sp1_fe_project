@@ -61,33 +61,43 @@ const onLogout = async () => {
     <div class="flex-1 px-4 space-y-1 overflow-y-auto overflow-x-hidden">
       <!-- Workspace switcher -->
       <div class="mb-6" :class="isMini ? 'px-0' : 'px-2'">
-        <label
-          v-if="!isMini"
-          class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 block px-1"
-        >
-          Workspace
-        </label>
-        <USelectMenu
-          v-model="selectedWorkspaceId"
-          :items="
-            workspacesStore.workspaces.map((w) => ({
-              ...w,
-              label: w.name,
-              description: w.description || undefined
-            }))
-          "
-          value-key="id"
-          label-key="name"
-          :class="isMini ? 'w-10 mx-auto' : 'w-full'"
-          :placeholder="isMini ? '' : 'Select Workspace'"
-          :ui="{
-            base: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors'
-          }"
-        >
-          <template #leading>
-            <UIcon name="i-lucide-building-2" class="text-gray-400" />
-          </template>
-        </USelectMenu>
+        <UButton
+          v-if="isMini"
+          icon="i-lucide-building-2"
+          variant="ghost"
+          color="neutral"
+          size="md"
+          class="w-full justify-center"
+          @click="$emit('toggle')"
+        />
+        <template v-else>
+          <label
+            class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 block px-1"
+          >
+            Workspace
+          </label>
+          <USelectMenu
+            v-model="selectedWorkspaceId"
+            :items="
+              workspacesStore.workspaces.map((w) => ({
+                ...w,
+                label: w.name,
+                description: w.description || undefined
+              }))
+            "
+            value-key="id"
+            label-key="name"
+            class="w-full"
+            placeholder="Select Workspace"
+            :ui="{
+              base: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors'
+            }"
+          >
+            <template #leading>
+              <UIcon name="i-lucide-building-2" class="text-gray-400" />
+            </template>
+          </USelectMenu>
+        </template>
       </div>
 
       <nav class="space-y-1">
