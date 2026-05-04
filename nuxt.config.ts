@@ -19,7 +19,16 @@ export default defineNuxtConfig({
   // NEVER hardcode the IP here — use .env.local or CI/CD secrets instead.
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || ''
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/'
+    }
+  },
+
+  routeRules: {
+    '/api/**': {
+      proxy: 'http://127.0.0.1:8080/api/**'
+    },
+    '/login': {
+      proxy: 'http://127.0.0.1:8080/login'
     }
   },
 

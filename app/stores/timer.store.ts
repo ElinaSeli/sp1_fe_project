@@ -68,8 +68,22 @@ export const useTimerStore = defineStore(
 
     async function startTimer() {
       const workspacesStore = useWorkspacesStore()
+      const projectsStore = useProjectsStore()
 
       if (!workspacesStore.activeWorkspaceId) throw new Error('No active workspace')
+
+      // Graceful validation: if the project ID is ghost/stale, clear it before sending
+      if (
+        draftEntry.value.projectId &&
+        !projectsStore.projects.some((p) => p.id === draftEntry.value.projectId)
+      ) {
+        console.warn(
+          'Ghost project ID detected, clearing before start:',
+          draftEntry.value.projectId
+        )
+        draftEntry.value.projectId = null
+        draftEntry.value.issueId = null
+      }
 
       isStarting.value = true
       try {

@@ -6,15 +6,25 @@ export function useApiClient() {
   const {
     public: { apiBaseUrl }
   } = useRuntimeConfig()
-  if (!apiBaseUrl) throw new Error('NUXT_PUBLIC_API_BASE_URL is not set — check your .env')
-  const baseURL = apiBaseUrl as string
+
+  // Force relative path if baseURL points to the backend directly (to use Nuxt proxy)
+  let baseURL = apiBaseUrl as string
+  if (baseURL.includes('localhost:8080')) {
+    baseURL = '/'
+  }
 
   async function request<T>(path: string, options: FetchOptions = {}): Promise<ServiceResponse<T>> {
     const authStore = useAuthStore()
 
     const tokenValue = toValue(authStore.token)
     const finalToken = typeof tokenValue === 'string' ? tokenValue : null
-    const normalizedPath = path.startsWith('/') ? path.substring(1) : path
+
+    // If the path already includes /api and baseURL is /, we're good.
+    // If baseURL is /api and path includes /api, we should strip it from the path.
+    let normalizedPath = path.startsWith('/') ? path.substring(1) : path
+    if (baseURL.endsWith('/api') && normalizedPath.startsWith('api/')) {
+      normalizedPath = normalizedPath.substring(4)
+    }
 
     try {
       const headers: Record<string, string> = {
@@ -35,6 +45,11 @@ export function useApiClient() {
           }
         }
       }
+
+      console.log(`[API Request] ${options.method || 'GET'} ${normalizedPath}`, {
+        baseURL,
+        headers: { ...headers, Authorization: headers.Authorization ? 'Bearer [REDACTED]' : 'NONE' }
+      })
 
       const data = await $fetch<T>(normalizedPath, {
         baseURL,

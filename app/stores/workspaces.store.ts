@@ -24,10 +24,10 @@ export const useWorkspacesStore = defineStore(
     // --- Actions ---
     function setWorkspaces(list: Workspace[]) {
       workspaces.value = list
-      // Auto-select first workspace if none is selected or the selected one no longer exists
+      // Ensure the active workspace ID exists in the new list, or clear/auto-select
       const stillExists = list.some((w) => w.id === activeWorkspaceId.value)
-      if (list.length > 0 && !stillExists) {
-        activeWorkspaceId.value = list[0]!.id
+      if (!stillExists) {
+        activeWorkspaceId.value = list.length > 0 ? list[0]!.id : null
       }
     }
 
