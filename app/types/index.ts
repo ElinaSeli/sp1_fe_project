@@ -138,7 +138,7 @@ export interface TimeEntry {
 }
 
 export interface CreateTimeEntryRequest {
-  projectId: string
+  projectId?: string | null
   issueId?: string | null
   description?: string | null
   timeStart: string // ISO date-time
@@ -153,6 +153,8 @@ export interface StartTimerRequest {
 }
 
 export interface UpdateTimeEntryRequest {
+  projectId?: string | null
+  issueId?: string | null
   description?: string | null
   timeStart: string
   timeEnd: string

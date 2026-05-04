@@ -81,9 +81,18 @@ async function onDelete(project: Project) {
   toast.add({ title: `"${project.name}" deleted`, color: 'success' })
 }
 
+const onCreateNew = () => {
+  isCreateOpen.value = true
+}
+
 onMounted(async () => {
+  window.addEventListener('app:createNew', onCreateNew)
   await workspacesStore.fetchWorkspaces()
   await projectsStore.fetchProjects()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('app:createNew', onCreateNew)
 })
 </script>
 
