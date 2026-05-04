@@ -36,18 +36,6 @@ export default defineNuxtConfig({
     preset: 'static'
   },
 
-  vite: {
-    server: {
-      proxy: {
-        '/api-proxy': {
-          target: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:8080',
-          changeOrigin: true,
-          rewrite: (path: string) => path.replace(/^\/api-proxy/, '')
-        }
-      }
-    }
-  },
-
   eslint: {
     config: {
       stylistic: {
