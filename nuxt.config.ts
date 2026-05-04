@@ -16,10 +16,22 @@ export default defineNuxtConfig({
   },
 
   // Backend base URL is injected via NUXT_PUBLIC_API_BASE_URL env variable.
-  // NEVER hardcode the IP here — use .env.local or CI/CD secrets instead.
+  // In production (using Nginx), this will remain '/' as Nginx handles the /api routing.
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || ''
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/'
+    }
+  },
+
+  // TODO: The routeRules proxy is for local development only.
+  // For production deployment on a single server, use Nginx as a reverse proxy
+  // to route '/api/**' to the backend and '/' to the static frontend build.
+  routeRules: {
+    '/api/**': {
+      proxy: `${process.env.NUXT_BACKEND_URL}/api/**`
+    },
+    '/login': {
+      proxy: `${process.env.NUXT_BACKEND_URL}/login`
     }
   },
 

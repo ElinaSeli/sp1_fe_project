@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Workspace } from '~/types'
+import type { Workspace, CreateWorkspaceRequest } from '~/types'
 import { workspacesService } from '~/services'
 
 /**
@@ -13,6 +13,8 @@ export const useWorkspacesStore = defineStore(
     // --- State ---
     const workspaces = ref<Workspace[]>([])
     const activeWorkspaceId = ref<string | null>(null)
+    const isLoading = ref(false)
+    const error = ref<string | null>(null)
 
     // --- Getters ---
     const activeWorkspace = computed(
@@ -22,12 +24,10 @@ export const useWorkspacesStore = defineStore(
     // --- Actions ---
     function setWorkspaces(list: Workspace[]) {
       workspaces.value = list
-      // Set first workspace as active if none selected
-      if (list.length > 0 && !activeWorkspaceId.value) {
-        const first = list[0]
-        if (first) {
-          activeWorkspaceId.value = first.id
-        }
+      // Ensure the active workspace ID exists in the new list, or clear/auto-select
+      const stillExists = list.some((w) => w.id === activeWorkspaceId.value)
+      if (!stillExists) {
+        activeWorkspaceId.value = list.length > 0 ? list[0]!.id : null
       }
     }
 
@@ -36,20 +36,54 @@ export const useWorkspacesStore = defineStore(
     }
 
     async function fetchWorkspaces() {
-      const response = await workspacesService.getAll()
-      if (!response.error && response.data) {
-        setWorkspaces(response.data)
+      isLoading.value = true
+      error.value = null
+      try {
+        const response = await workspacesService.getAll()
+        if (response.error) {
+          error.value = response.error
+        } else if (response.data) {
+          setWorkspaces(response.data)
+        }
+        return response
+      } catch (e: unknown) {
+        error.value = e instanceof Error ? e.message : 'Failed to fetch workspaces'
+      } finally {
+        isLoading.value = false
       }
-      return response
+    }
+
+    async function createWorkspace(payload: CreateWorkspaceRequest): Promise<Workspace | null> {
+      isLoading.value = true
+      error.value = null
+      try {
+        const response = await workspacesService.create(payload)
+        if (response.error || !response.data) {
+          error.value = response.error ?? 'Failed to create workspace'
+          return null
+        }
+        workspaces.value.unshift(response.data)
+        // Auto-select the newly created workspace
+        activeWorkspaceId.value = response.data.id
+        return response.data
+      } catch (e: unknown) {
+        error.value = e instanceof Error ? e.message : 'Failed to create workspace'
+        return null
+      } finally {
+        isLoading.value = false
+      }
     }
 
     return {
       workspaces,
       activeWorkspaceId,
       activeWorkspace,
+      isLoading,
+      error,
       setWorkspaces,
       setActiveWorkspace,
-      fetchWorkspaces
+      fetchWorkspaces,
+      createWorkspace
     }
   },
   {
