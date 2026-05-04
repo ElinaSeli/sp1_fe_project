@@ -1,7 +1,12 @@
 import { defineStore } from 'pinia'
 import { timerService } from '~/services/timer.service'
 import { timeEntriesService } from '~/services/timeEntries.service'
-import type { TimeEntryViewModel } from '~/types'
+import type {
+  TimeEntry,
+  TimeEntryViewModel,
+  CreateTimeEntryRequest,
+  UpdateTimeEntryRequest
+} from '~/types'
 
 export const useTimerStore = defineStore(
   'timer',
@@ -20,6 +25,7 @@ export const useTimerStore = defineStore(
     })
 
     const entries = ref<TimeEntryViewModel[]>([])
+    const rawEntries = ref<TimeEntry[]>([])
 
     async function fetchEntries() {
       const workspacesStore = useWorkspacesStore()
@@ -27,6 +33,7 @@ export const useTimerStore = defineStore(
 
       const response = await timeEntriesService.getAll(workspacesStore.activeWorkspaceId)
       if (response.data) {
+        rawEntries.value = response.data
         entries.value = response.data.map((e) => ({
           id: e.id,
           description: e.description || '',
@@ -117,6 +124,59 @@ export const useTimerStore = defineStore(
       }
     }
 
+    async function createEntry(payload: CreateTimeEntryRequest): Promise<TimeEntry | null> {
+      const workspacesStore = useWorkspacesStore()
+      if (!workspacesStore.activeWorkspaceId) return null
+
+      const response = await timeEntriesService.create(workspacesStore.activeWorkspaceId, payload)
+      if (!response.data) return null
+
+      const e = response.data
+      rawEntries.value.unshift(e)
+      entries.value.unshift({
+        id: e.id,
+        description: e.description || '',
+        projectId: e.projectId,
+        duration: e.timeEnd
+          ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
+          : 0,
+        timeStart: e.timeStart
+      })
+      return e
+    }
+
+    async function updateEntry(
+      id: string,
+      payload: UpdateTimeEntryRequest
+    ): Promise<TimeEntry | null> {
+      const workspacesStore = useWorkspacesStore()
+      if (!workspacesStore.activeWorkspaceId) return null
+
+      const response = await timeEntriesService.update(
+        workspacesStore.activeWorkspaceId,
+        id,
+        payload
+      )
+      if (!response.data) return null
+
+      const e = response.data
+      const rawIdx = rawEntries.value.findIndex((r) => r.id === id)
+      if (rawIdx !== -1) rawEntries.value[rawIdx] = e
+      const vmIdx = entries.value.findIndex((v) => v.id === id)
+      if (vmIdx !== -1) {
+        entries.value[vmIdx] = {
+          id: e.id,
+          description: e.description || '',
+          projectId: e.projectId,
+          duration: e.timeEnd
+            ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
+            : 0,
+          timeStart: e.timeStart
+        }
+      }
+      return e
+    }
+
     function resetDraft() {
       draftEntry.value = {
         description: '',
@@ -133,10 +193,13 @@ export const useTimerStore = defineStore(
       startTimestamp,
       draftEntry,
       entries,
+      rawEntries,
       fetchEntries,
       fetchActiveTimer,
       startTimer,
       stopTimer,
+      createEntry,
+      updateEntry,
       resetDraft
     }
   },

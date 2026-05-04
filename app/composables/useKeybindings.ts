@@ -55,9 +55,9 @@ const ACTION_HANDLERS: Record<KeybindingActionId, () => void> = {
   },
   focusTaskField: () => window.dispatchEvent(new CustomEvent('app:focusTaskField')),
   focusDescField: () => document.querySelector<HTMLElement>('[data-focus="desc-field"]')?.focus(),
-  editLastEntry: () => console.warn('[keybinding] editLastEntry fired — TODO'),
-  newTimeEntry: () => console.warn('[keybinding] newTimeEntry fired — TODO'),
-  createNew: () => console.warn('[keybinding] createNew fired — TODO')
+  editLastEntry: () => window.dispatchEvent(new CustomEvent('app:editLastTimeEntry')),
+  newTimeEntry: () => window.dispatchEvent(new CustomEvent('app:openNewTimeEntry')),
+  createNew: () => window.dispatchEvent(new CustomEvent('app:createNew'))
 }
 
 // Actions that should fire even when an input element is focused

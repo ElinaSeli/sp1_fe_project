@@ -1,11 +1,64 @@
 <script setup lang="ts">
+import type { TimeEntry } from '~/types'
+
 definePageMeta({
   layout: 'dashboard'
 })
 
 const timerStore = useTimerStore()
+const projectsStore = useProjectsStore()
+const issuesStore = useIssuesStore()
+const tagsStore = useTagsStore()
+const workspacesStore = useWorkspacesStore()
+const toast = useToast()
 
-onMounted(() => timerStore.fetchEntries())
+const dialogOpen = ref(false)
+const editingEntry = ref<TimeEntry | null>(null)
+
+function openCreate() {
+  editingEntry.value = null
+  dialogOpen.value = true
+}
+
+function openEdit(id: string) {
+  const raw = timerStore.rawEntries.find((e) => e.id === id)
+  if (!raw) return
+  editingEntry.value = raw
+  dialogOpen.value = true
+}
+
+function onSaved(_entry: TimeEntry) {
+  toast.add({ title: editingEntry.value ? 'Entry updated' : 'Entry created', color: 'success' })
+}
+
+const onOpenNewTimeEntry = () => openCreate()
+const onCreateNew = () => openCreate()
+const onEditLastTimeEntry = () => {
+  const last = timerStore.entries[0]
+  if (last) openEdit(last.id)
+}
+
+onMounted(async () => {
+  window.addEventListener('app:openNewTimeEntry', onOpenNewTimeEntry)
+  window.addEventListener('app:createNew', onCreateNew)
+  window.addEventListener('app:editLastTimeEntry', onEditLastTimeEntry)
+
+  const wsId = workspacesStore.activeWorkspaceId
+  if (wsId) {
+    await Promise.all([
+      timerStore.fetchEntries(),
+      projectsStore.fetchProjects(),
+      issuesStore.fetchIssues(),
+      tagsStore.fetchTags()
+    ])
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('app:openNewTimeEntry', onOpenNewTimeEntry)
+  window.removeEventListener('app:createNew', onCreateNew)
+  window.removeEventListener('app:editLastTimeEntry', onEditLastTimeEntry)
+})
 
 const formatDuration = (seconds: number) => {
   const h = Math.floor(seconds / 3600)
@@ -21,7 +74,6 @@ const formatDate = (dateStr: string) => {
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
-// Group entries by date
 const groupedEntries = computed(() => {
   const groups: Record<string, { date: string; items: typeof timerStore.entries; total: number }> =
     {}
@@ -41,6 +93,12 @@ const groupedEntries = computed(() => {
 
 <template>
   <div class="max-w-5xl mx-auto space-y-8">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Time Entries</h2>
+      <UButton icon="i-lucide-plus" color="primary" @click="openCreate"> New Entry </UButton>
+    </div>
+
     <div v-for="group in groupedEntries" :key="group.date" class="space-y-3">
       <!-- Date Header -->
       <div class="flex items-center justify-between px-2">
@@ -79,20 +137,34 @@ const groupedEntries = computed(() => {
             </div>
           </div>
 
-          <div class="flex items-center gap-6">
-            <span class="text-sm font-mono font-medium text-gray-600 dark:text-gray-400">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-mono font-medium text-gray-600 dark:text-gray-400 mr-4">
               {{ formatDuration(entry.duration) }}
             </span>
             <UButton
-              icon="i-lucide-play"
+              icon="i-lucide-pencil"
               variant="ghost"
               color="neutral"
               size="xs"
               class="hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-600"
+              @click="openEdit(entry.id)"
             />
           </div>
         </div>
       </div>
     </div>
+
+    <div
+      v-if="groupedEntries.length === 0"
+      class="flex flex-col items-center py-16 text-gray-400 gap-3"
+    >
+      <UIcon name="i-lucide-clock" class="text-5xl" />
+      <p class="text-sm">No time entries yet. Create your first one!</p>
+      <UButton icon="i-lucide-plus" color="primary" variant="soft" @click="openCreate">
+        New Entry
+      </UButton>
+    </div>
+
+    <AppTimeEntryDialog v-model:open="dialogOpen" :entry="editingEntry" @saved="onSaved" />
   </div>
 </template>

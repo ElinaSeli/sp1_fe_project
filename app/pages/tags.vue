@@ -34,9 +34,18 @@ async function onSubmit() {
   state.color = '#10b981'
 }
 
+const onCreateNew = () => {
+  isCreateOpen.value = true
+}
+
 onMounted(async () => {
+  window.addEventListener('app:createNew', onCreateNew)
   await workspacesStore.fetchWorkspaces()
   await tagsStore.fetchTags()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('app:createNew', onCreateNew)
 })
 </script>
 
