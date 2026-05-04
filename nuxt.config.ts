@@ -28,10 +28,10 @@ export default defineNuxtConfig({
   // to route '/api/**' to the backend and '/' to the static frontend build.
   routeRules: {
     '/api/**': {
-      proxy: `${process.env.NUXT_BACKEND_URL || 'http://127.0.0.1:8080'}/api/**`
+      proxy: `${process.env.NUXT_BACKEND_URL}/api/**`
     },
     '/login': {
-      proxy: `${process.env.NUXT_BACKEND_URL || 'http://127.0.0.1:8080'}/login`
+      proxy: `${process.env.NUXT_BACKEND_URL}/login`
     }
   },
 
