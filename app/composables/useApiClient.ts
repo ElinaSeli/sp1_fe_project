@@ -6,12 +6,7 @@ export function useApiClient() {
   const {
     public: { apiBaseUrl }
   } = useRuntimeConfig()
-
-  // Force relative path if baseURL points to the backend directly (to use Nuxt proxy)
-  let baseURL = apiBaseUrl as string
-  if (baseURL.includes('localhost:8080')) {
-    baseURL = '/'
-  }
+  const baseURL = (apiBaseUrl as string) || '/'
 
   async function request<T>(path: string, options: FetchOptions = {}): Promise<ServiceResponse<T>> {
     const authStore = useAuthStore()
@@ -19,8 +14,7 @@ export function useApiClient() {
     const tokenValue = toValue(authStore.token)
     const finalToken = typeof tokenValue === 'string' ? tokenValue : null
 
-    // If the path already includes /api and baseURL is /, we're good.
-    // If baseURL is /api and path includes /api, we should strip it from the path.
+    // Normalize path and prevent double /api if baseURL is already /api
     let normalizedPath = path.startsWith('/') ? path.substring(1) : path
     if (baseURL.endsWith('/api') && normalizedPath.startsWith('api/')) {
       normalizedPath = normalizedPath.substring(4)
@@ -45,11 +39,6 @@ export function useApiClient() {
           }
         }
       }
-
-      console.log(`[API Request] ${options.method || 'GET'} ${normalizedPath}`, {
-        baseURL,
-        headers: { ...headers, Authorization: headers.Authorization ? 'Bearer [REDACTED]' : 'NONE' }
-      })
 
       const data = await $fetch<T>(normalizedPath, {
         baseURL,
