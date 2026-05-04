@@ -191,6 +191,23 @@ export const useTimerStore = defineStore(
       return e
     }
 
+    async function deleteEntry(id: string): Promise<boolean> {
+      const workspacesStore = useWorkspacesStore()
+      if (!workspacesStore.activeWorkspaceId) return false
+
+      const response = await timeEntriesService.remove(workspacesStore.activeWorkspaceId, id)
+      if (response.error) {
+        console.error('Failed to delete time entry:', response.error)
+        return false
+      }
+
+      // Remove from reactive lists
+      rawEntries.value = rawEntries.value.filter((r) => r.id !== id)
+      entries.value = entries.value.filter((v) => v.id !== id)
+
+      return true
+    }
+
     function resetDraft() {
       draftEntry.value = {
         description: '',
@@ -214,6 +231,7 @@ export const useTimerStore = defineStore(
       stopTimer,
       createEntry,
       updateEntry,
+      deleteEntry,
       resetDraft
     }
   },

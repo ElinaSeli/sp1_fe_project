@@ -31,6 +31,17 @@ function onSaved(_entry: TimeEntry) {
   toast.add({ title: editingEntry.value ? 'Entry updated' : 'Entry created', color: 'success' })
 }
 
+async function deleteEntry(id: string) {
+  if (confirm('Are you sure you want to delete this time entry?')) {
+    const success = await timerStore.deleteEntry(id)
+    if (success) {
+      toast.add({ title: 'Entry deleted', color: 'success' })
+    } else {
+      toast.add({ title: 'Failed to delete entry', color: 'error' })
+    }
+  }
+}
+
 const onOpenNewTimeEntry = () => openCreate()
 const onCreateNew = () => openCreate()
 const onEditLastTimeEntry = () => {
@@ -148,6 +159,14 @@ const groupedEntries = computed(() => {
               size="xs"
               class="hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-600"
               @click="openEdit(entry.id)"
+            />
+            <UButton
+              icon="i-lucide-trash-2"
+              variant="ghost"
+              color="error"
+              size="xs"
+              class="hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600"
+              @click="deleteEntry(entry.id)"
             />
           </div>
         </div>
