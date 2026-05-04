@@ -1,10 +1,10 @@
 import { useApiClient } from '~/composables/useApiClient'
-import type { ServiceResponse, TimeEntry } from '~/types'
+import type { ServiceResponse, TimeEntry, StartTimerRequest } from '~/types'
 
 export const timerService = {
   async start(
     workspaceId: string,
-    payload: { description: string; projectId: string | null; taskId?: string; tagIds?: string[] }
+    payload: StartTimerRequest
   ): Promise<ServiceResponse<TimeEntry>> {
     const { request } = useApiClient()
     return request<TimeEntry>(`/api/workspaces/${workspaceId}/timer/start`, {
@@ -23,10 +23,5 @@ export const timerService = {
   async getActive(workspaceId: string): Promise<ServiceResponse<TimeEntry | null>> {
     const { request } = useApiClient()
     return request<TimeEntry | null>(`/api/workspaces/${workspaceId}/timer`)
-  },
-
-  async getEntries(workspaceId: string): Promise<ServiceResponse<TimeEntry[]>> {
-    const { request } = useApiClient()
-    return request<TimeEntry[]>(`/api/workspaces/${workspaceId}/entries`)
   }
 }

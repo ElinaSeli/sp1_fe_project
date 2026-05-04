@@ -92,12 +92,6 @@ sp1-timetracking-fe-drafts/
 │   └── types/
 │       └── index.ts            # ALL domain types live here — single source of truth
 │
-├── server/                     # Nuxt server (mock only — delete when real BE is ready)
-│   ├── middleware/
-│   │   └── 01.mockApi.ts       # Intercepts /api-proxy/* — mock credentials: testuser/password123
-│   └── utils/
-│       └── mockData.ts         # All mock data constants (MOCK_*)
-│
 ├── tests/
 │   └── setup.spec.ts           # Vitest setup
 │
@@ -115,10 +109,9 @@ sp1-timetracking-fe-drafts/
 ## API / networking
 
 - All requests go through `app/composables/useApiClient.ts`
-- Base path: `/api-proxy` (Vite proxy or mock middleware intercepts)
+- Base URL: `NUXT_PUBLIC_API_BASE_URL` (set in `.env`). Requests go directly cross-origin to the backend.
 - Auth: JWT stored in `auth_token` cookie, sent as `Authorization: Bearer <token>`
-- Real BE URL injected via env: `NUXT_PUBLIC_API_BASE_URL`
-- **Mock mode** (current): `server/middleware/01.mockApi.ts` handles all `/api-proxy/*` routes. To switch to real BE: delete `server/`, uncomment the Vite proxy in `nuxt.config.ts`
+- No proxy layer — `nitro.preset: 'static'`, no server middleware.
 
 ---
 
@@ -143,8 +136,6 @@ All domain types in one file. Key types:
 ## Patterns to follow
 
 **Services** return `ServiceResponse<T>` — never throw, always return `{ data, error }`.
-
-**Mock data** lives exclusively in `server/utils/mockData.ts` — never inline mock data in services, stores, or components.
 
 **`pinia-plugin-persistedstate`** is active — stores opt-in with `persist: { pick: [...] }`. Token is in a cookie, not localStorage.
 
