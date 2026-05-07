@@ -126,6 +126,7 @@ export const useTimerStore = defineStore(
               : 0,
             timeStart: entry.timeStart
           })
+          rawEntries.value.unshift(entry)
           isRunning.value = false
           startTimestamp.value = null
           activeEntryId.value = null
