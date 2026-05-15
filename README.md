@@ -1,64 +1,110 @@
-# Nuxt Starter Template
+# Time Tracking Platform (Toggl Clone)
 
-[![Nuxt UI](https://img.shields.io/badge/Made%20with-Nuxt%20UI-00DC82?logo=nuxt&labelColor=020420)](https://ui.nuxt.com)
+![alt text](image.png)
 
-Use this template to get started with [Nuxt UI](https://ui.nuxt.com) quickly.
+> **About this project:** This is a time-tracking platform developed as part of a university project. It serves as an advanced alternative to commercial tools like Toggl Track, removing external API rate limits and providing native integration with ticketing systems (such as Redmine).
 
-- [Live demo](https://starter-template.nuxt.dev/)
-- [Documentation](https://ui.nuxt.com/docs/getting-started/installation/nuxt)
+## My Role & Contributions
 
-<a href="https://starter-template.nuxt.dev/" target="_blank">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png">
-    <img alt="Nuxt Starter Template" src="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png" width="830" height="466">
-  </picture>
-</a>
+Within this 6-person engineering team, I served as the **Web Specialist & UI/UX Designer**.
 
-> The starter template for Vue is on https://github.com/nuxt-ui-templates/starter-vue.
+**My core responsibilities and achievements include:**
 
-## Quick Start
+- **UI/UX Design:** Designed a modern, distraction-free interface prioritizing speed. The core design philosophy was "efficiency above all else"—reducing the number of mouse clicks compared to Toggl and ensuring a **keyboard-first** interaction model.
+- **Frontend Architecture:** Built the frontend ecosystem from the ground up using **Nuxt 3** and **Vue.js**, leveraging **Pinia** for robust state management.
+- **Cross-Platform Delivery:** Integrated **Tauri** to wrap the web application into a native desktop application with system tray capabilities and idle detection.
+- **Component Engineering:** Developed accessible, reusable UI components using **TailwindCSS** and **Nuxt UI**.
+- **Process Automation:** Ensured seamless frontend and backend (Micronaut/Kotlin) synchronization for "Offline-First" capabilities.
 
-```bash [Terminal]
-npm create nuxt@latest -- -t ui
-```
+---
 
-## Deploy your own
+## The Concept & Features
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-name=starter&repository-url=https%3A%2F%2Fgithub.com%2Fnuxt-ui-templates%2Fstarter&demo-image=https%3A%2F%2Fui.nuxt.com%2Fassets%2Ftemplates%2Fnuxt%2Fstarter-dark.png&demo-url=https%3A%2F%2Fstarter-template.nuxt.dev%2F&demo-title=Nuxt%20Starter%20Template&demo-description=A%20minimal%20template%20to%20get%20started%20with%20Nuxt%20UI.)
+The platform was built with a strict emphasis on performance, keyboard-driven navigation, and contextual automation (predicting user intent to skip confirmation dialogs).
 
-## Setup
+### Key Features
 
-Make sure to install the dependencies:
+- **Cross-Platform Sync:** Real-time data transfer between web, desktop, and mobile platforms. Start tracking on your PC, stop it on your phone.
+- **Timer & Manual Modes:** A classic "start/stop" timer alongside a seamless manual entry mode for logging forgotten hours.
+- **Organization & Redmine Integration:** Full categorization using Projects, Clients, Tags, and Colors, natively tied to Redmine issues.
+- **Offline-First:** Track your time without an internet connection. The app automatically syncs local data with the PostgreSQL backend once online.
+- **Desktop Idle Detection:** A smart desktop client feature that warns you if you leave a timer running while away from your computer.
+- **Focus Tools:** Built-in Pomodoro timer strategies for maximum productivity.
+
+---
+
+## Technology Stack
+
+- **Framework:** [Nuxt 3](https://nuxt.com/) (Vue.js)
+- **UI & Styling:** [Nuxt UI](https://ui.nuxt.com/), [Tailwind CSS](https://tailwindcss.com/)
+- **State Management:** [Pinia](https://pinia.vuejs.org/)
+- **Desktop Client:** [Tauri](https://tauri.app/) (Rust-based WebView wrapper)
+- **Testing:** [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/)
+- **Package Manager:** [pnpm](https://pnpm.io/)
+
+---
+
+## System Design & Architecture
+
+As part of the project's software engineering lifecycle, we developed comprehensive documentation, including use cases, domain models, and activity diagrams.
+
+_Note: The original full documentation is hosted on our internal school GitLab wiki, but key architecture diagrams are included below._
+
+### Use Cases & Activity Diagrams
+
+_(These diagrams are pulled directly from our project documentation to illustrate system architecture)_
+
+#### Database Architecture
+
+<img src=".ai/documentation/Databazovy-Diagram/KOM.png" alt="Database Diagram" width="800">
+*Figure 1: Core Database Schema and entity relationships.*
+
+#### Time Tracking Activity
+
+<img src=".ai/documentation/Aktivity-Diagram/DA - Vytvoření časového záznamu pomocí časovače/Pasted image 20260322230056.png" alt="Time Tracking Activity Diagram" width="800">
+*Figure 2: Activity Diagram mapping the start/stop state machine when tracking time.*
+
+#### Redmine Sync Architecture
+
+<img src=".ai/documentation/Aktivity-Diagram/DA - Synchornizace dat z Redmine/Attachments/Automatická synchronizace.png" alt="Redmine Sync Diagram" width="800">
+*Figure 3: Activity Diagram showing the automatic background synchronization with Redmine.*
+
+### Visual Gallery
+
+_(Placeholders for your UI screenshots. Simply save your PNGs to `docs/screenshots/` and uncomment these lines)_
+
+<!--
+![Dashboard View](docs/screenshots/dashboard.png)
+*Figure 3: Main dashboard and active timer view.*
+
+![Project Management](docs/screenshots/projects.png)
+*Figure 4: Client and Project organization interface.*
+-->
+
+---
+
+## ⚙️ Setup & Local Development
+
+Want to run the frontend locally? Ensure you have Node.js and `pnpm` installed.
+
+### 1. Install Dependencies
 
 ```bash
 pnpm install
 ```
 
-## Development Server
+### 2. Start Web Server
 
-Start the development server on `http://localhost:3000`:
+Run the development server (runs on `http://localhost:3000`):
 
 ```bash
 pnpm dev
 ```
 
-## Production
+### 3. Run Desktop App (Tauri)
 
-Build the application for production:
-
-```bash
-pnpm build
-```
-
-Locally preview production build:
+To launch the native desktop application (requires Rust toolchain):
 
 ```bash
-pnpm preview
+pnpm tauri dev
 ```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
-
-## Renovate integration
-
-Install [Renovate GitHub app](https://github.com/apps/renovate/installations/select_target) on your repository and you are good to go.
