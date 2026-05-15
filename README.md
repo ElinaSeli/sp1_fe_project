@@ -1,6 +1,6 @@
 # Time Tracking Platform (Toggl Clone)
 
-![alt text](image.png)
+![alt text](docs/image.png)
 
 > **About this project:** This is a time-tracking platform developed as part of a university project. It serves as an advanced alternative to commercial tools like Toggl Track, removing external API rate limits and providing native integration with ticketing systems (such as Redmine).
 
