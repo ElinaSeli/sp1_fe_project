@@ -9,6 +9,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:open': [boolean]
   saved: [TimeEntry]
+  deleted: [string]
 }>()
 
 const timerStore = useTimerStore()
@@ -128,6 +129,25 @@ async function onSubmit() {
     isLoading.value = false
   }
 }
+
+async function onDelete() {
+  if (!props.entry) return
+  if (!confirm('Are you sure you want to delete this time entry?')) return
+
+  isLoading.value = true
+  try {
+    const success = await timerStore.deleteEntry(props.entry.id)
+    if (success) {
+      toast.add({ title: 'Entry deleted', color: 'success', icon: 'i-lucide-check' })
+      emit('deleted', props.entry.id)
+      emit('update:open', false)
+    } else {
+      toast.add({ title: 'Failed to delete entry', color: 'error', icon: 'i-lucide-alert-circle' })
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -219,6 +239,16 @@ async function onSubmit() {
           </p>
 
           <div class="flex justify-end gap-3 pt-2">
+            <UButton
+              v-if="isEdit"
+              type="button"
+              color="error"
+              variant="ghost"
+              class="mr-auto hover:bg-red-50 dark:hover:bg-red-950"
+              @click="onDelete"
+            >
+              Delete
+            </UButton>
             <UButton
               type="button"
               color="neutral"

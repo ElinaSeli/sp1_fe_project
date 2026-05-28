@@ -33,16 +33,25 @@ export const useTimerStore = defineStore(
 
       const response = await timeEntriesService.getAll(workspacesStore.activeWorkspaceId)
       if (response.data) {
-        rawEntries.value = response.data
-        entries.value = response.data.map((e) => ({
-          id: e.id,
-          description: e.description || '',
-          projectId: e.projectId,
-          duration: e.timeEnd
-            ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
-            : 0,
-          timeStart: e.timeStart
-        }))
+        // Defensive: Extract .content if the backend returns a PagedResponse, otherwise fallback to array
+        const listData = Array.isArray(response.data)
+          ? response.data
+          : (response.data as Record<string, unknown>).content
+        if (Array.isArray(listData)) {
+          rawEntries.value = listData as TimeEntry[]
+          entries.value = (listData as TimeEntry[]).map((e) => ({
+            id: e.id,
+            description: e.description || '',
+            projectId: e.projectId,
+            duration: e.timeEnd
+              ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
+              : 0,
+            timeStart: e.timeStart
+          }))
+        } else {
+          rawEntries.value = []
+          entries.value = []
+        }
       }
     }
 
@@ -126,6 +135,7 @@ export const useTimerStore = defineStore(
               : 0,
             timeStart: entry.timeStart
           })
+          rawEntries.value.unshift(entry)
           isRunning.value = false
           startTimestamp.value = null
           activeEntryId.value = null
@@ -191,6 +201,23 @@ export const useTimerStore = defineStore(
       return e
     }
 
+    async function deleteEntry(id: string): Promise<boolean> {
+      const workspacesStore = useWorkspacesStore()
+      if (!workspacesStore.activeWorkspaceId) return false
+
+      const response = await timeEntriesService.remove(workspacesStore.activeWorkspaceId, id)
+      if (response.error) {
+        console.error('Failed to delete time entry:', response.error)
+        return false
+      }
+
+      // Remove from reactive lists
+      rawEntries.value = rawEntries.value.filter((r) => r.id !== id)
+      entries.value = entries.value.filter((v) => v.id !== id)
+
+      return true
+    }
+
     function resetDraft() {
       draftEntry.value = {
         description: '',
@@ -214,6 +241,7 @@ export const useTimerStore = defineStore(
       stopTimer,
       createEntry,
       updateEntry,
+      deleteEntry,
       resetDraft
     }
   },
