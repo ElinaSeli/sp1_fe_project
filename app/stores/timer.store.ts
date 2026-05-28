@@ -33,16 +33,25 @@ export const useTimerStore = defineStore(
 
       const response = await timeEntriesService.getAll(workspacesStore.activeWorkspaceId)
       if (response.data) {
-        rawEntries.value = response.data
-        entries.value = response.data.map((e) => ({
-          id: e.id,
-          description: e.description || '',
-          projectId: e.projectId,
-          duration: e.timeEnd
-            ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
-            : 0,
-          timeStart: e.timeStart
-        }))
+        // Defensive: Extract .content if the backend returns a PagedResponse, otherwise fallback to array
+        const listData = Array.isArray(response.data)
+          ? response.data
+          : (response.data as Record<string, unknown>).content
+        if (Array.isArray(listData)) {
+          rawEntries.value = listData as TimeEntry[]
+          entries.value = (listData as TimeEntry[]).map((e) => ({
+            id: e.id,
+            description: e.description || '',
+            projectId: e.projectId,
+            duration: e.timeEnd
+              ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
+              : 0,
+            timeStart: e.timeStart
+          }))
+        } else {
+          rawEntries.value = []
+          entries.value = []
+        }
       }
     }
 
