@@ -222,6 +222,28 @@ export const useTimerStore = defineStore(
       return true
     }
 
+    async function resumeEntry(id: string): Promise<boolean> {
+      const entry = rawEntries.value.find((e) => e.id === id)
+      if (!entry) return false
+
+      if (isRunning.value) {
+        await stopTimer()
+      }
+
+      draftEntry.value.description = entry.description || ''
+      draftEntry.value.projectId = entry.projectId
+      draftEntry.value.issueId = entry.issueId || null
+      draftEntry.value.tagIds = [...(entry.tagIds || [])]
+
+      try {
+        await startTimer()
+        return true
+      } catch (err) {
+        console.error('Failed to resume timer', err)
+        return false
+      }
+    }
+
     function resetDraft() {
       draftEntry.value = {
         description: '',
@@ -246,6 +268,7 @@ export const useTimerStore = defineStore(
       createEntry,
       updateEntry,
       deleteEntry,
+      resumeEntry,
       resetDraft
     }
   },
