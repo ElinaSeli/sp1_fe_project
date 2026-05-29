@@ -46,7 +46,8 @@ export const useTimerStore = defineStore(
             duration: e.timeEnd
               ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
               : 0,
-            timeStart: e.timeStart
+            timeStart: e.timeStart,
+            timeEnd: e.timeEnd
           }))
         } else {
           rawEntries.value = []
@@ -133,7 +134,8 @@ export const useTimerStore = defineStore(
                   (new Date(entry.timeEnd).getTime() - new Date(entry.timeStart).getTime()) / 1000
                 )
               : 0,
-            timeStart: entry.timeStart
+            timeStart: entry.timeStart,
+            timeEnd: entry.timeEnd
           })
           rawEntries.value.unshift(entry)
           isRunning.value = false
@@ -164,7 +166,8 @@ export const useTimerStore = defineStore(
         duration: e.timeEnd
           ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
           : 0,
-        timeStart: e.timeStart
+        timeStart: e.timeStart,
+        timeEnd: e.timeEnd
       })
       return e
     }
@@ -195,7 +198,8 @@ export const useTimerStore = defineStore(
           duration: e.timeEnd
             ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
             : 0,
-          timeStart: e.timeStart
+          timeStart: e.timeStart,
+          timeEnd: e.timeEnd
         }
       }
       return e
