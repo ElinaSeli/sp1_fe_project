@@ -1,16 +1,28 @@
 <script setup lang="ts">
-// TODO: prefill from real user profile API once available
+const authStore = useAuthStore()
+
 const account = reactive({
-  firstName: 'John-TODO',
-  lastName: 'Doe-TODO',
-  username: 'johndoe-TODO',
-  email: 'john.doe@example-TODO.com'
+  firstName: '',
+  lastName: '',
+  username: '',
+  email: ''
 })
 
 const password = reactive({
   current: '',
   next: '',
   confirm: ''
+})
+
+onMounted(async () => {
+  await authStore.fetchUserProfile()
+  const u = authStore.currentUser
+  if (u) {
+    account.firstName = u.firstName
+    account.lastName = u.lastName
+    account.username = u.username
+    account.email = u.email
+  }
 })
 
 function saveAccount() {
@@ -45,11 +57,17 @@ function changePassword() {
         </UFormField>
 
         <UFormField label="Username">
-          <UInput v-model="account.username" placeholder="Username" class="w-full" />
+          <UInput v-model="account.username" placeholder="Username" class="w-full" disabled />
         </UFormField>
 
         <UFormField label="Email">
-          <UInput v-model="account.email" type="email" placeholder="Email" class="w-full" />
+          <UInput
+            v-model="account.email"
+            type="email"
+            placeholder="Email"
+            class="w-full"
+            disabled
+          />
         </UFormField>
       </div>
 
@@ -71,15 +89,30 @@ function changePassword() {
 
       <div class="space-y-4 max-w-sm">
         <UFormField label="Current password">
-          <UInput v-model="password.current" type="password" placeholder="Current password" class="w-full" />
+          <UInput
+            v-model="password.current"
+            type="password"
+            placeholder="Current password"
+            class="w-full"
+          />
         </UFormField>
 
         <UFormField label="New password">
-          <UInput v-model="password.next" type="password" placeholder="New password" class="w-full" />
+          <UInput
+            v-model="password.next"
+            type="password"
+            placeholder="New password"
+            class="w-full"
+          />
         </UFormField>
 
         <UFormField label="Confirm new password">
-          <UInput v-model="password.confirm" type="password" placeholder="Confirm new password" class="w-full" />
+          <UInput
+            v-model="password.confirm"
+            type="password"
+            placeholder="Confirm new password"
+            class="w-full"
+          />
         </UFormField>
       </div>
 
