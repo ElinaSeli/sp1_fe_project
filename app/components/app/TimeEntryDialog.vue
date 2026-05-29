@@ -17,6 +17,7 @@ const projectsStore = useProjectsStore()
 const issuesStore = useIssuesStore()
 const tagsStore = useTagsStore()
 const toast = useToast()
+const confirm = useConfirm()
 
 const isEdit = computed(() => Boolean(props.entry))
 const isLoading = ref(false)
@@ -132,7 +133,14 @@ async function onSubmit() {
 
 async function onDelete() {
   if (!props.entry) return
-  if (!confirm('Are you sure you want to delete this time entry?')) return
+  const ok = await confirm({
+    title: 'Delete time entry?',
+    description: 'This action cannot be undone.',
+    confirmLabel: 'Delete',
+    confirmColor: 'error',
+    icon: 'i-lucide-trash-2'
+  })
+  if (!ok) return
 
   isLoading.value = true
   try {

@@ -9,6 +9,7 @@ const workspacesStore = useWorkspacesStore()
 const { integration, isLoading, error, testStatus, testMessage } = storeToRefs(integrationStore)
 const { activeWorkspaceId } = storeToRefs(workspacesStore)
 const toast = useToast()
+const confirm = useConfirm()
 
 // --- Add / Edit modal ---
 const isModalOpen = ref(false)
@@ -91,20 +92,19 @@ async function onSubmit() {
   isModalOpen.value = false
 }
 
-// --- Delete ---
 const showApiKey = ref(false)
 
-// --- Delete ---
-const isDeleteOpen = ref(false)
-
-function openDelete() {
-  isDeleteOpen.value = true
-}
-
-async function onDelete() {
+async function openDelete() {
   if (!activeWorkspaceId.value || !integration.value) return
+  const confirmed = await confirm({
+    title: `Remove "${integration.value.name}"?`,
+    description: 'This will not delete your imported projects or issues.',
+    confirmLabel: 'Remove',
+    confirmColor: 'error',
+    icon: 'i-lucide-trash-2'
+  })
+  if (!confirmed) return
   const ok = await integrationStore.deleteIntegration(activeWorkspaceId.value, integration.value.id)
-  isDeleteOpen.value = false
   if (ok) {
     toast.add({ title: 'Integration removed', color: 'success', icon: 'i-lucide-check-circle' })
   } else {
@@ -342,30 +342,6 @@ watch(activeWorkspaceId, (id) => {
               </UButton>
             </div>
           </form>
-        </UCard>
-      </template>
-    </UModal>
-
-    <!-- Delete confirmation modal -->
-    <UModal v-model:open="isDeleteOpen">
-      <template #content>
-        <UCard>
-          <template #header>
-            <div class="flex items-center gap-3">
-              <UIcon name="i-lucide-trash-2" class="text-red-500" />
-              <h2 class="text-lg font-semibold">Remove Integration</h2>
-            </div>
-          </template>
-
-          <p class="text-sm text-gray-600 dark:text-gray-300">
-            Remove the <span class="font-semibold">{{ integration?.name }}</span> integration? This
-            will not delete your imported projects or issues.
-          </p>
-
-          <div class="flex justify-end gap-3 pt-4">
-            <UButton color="neutral" variant="ghost" @click="isDeleteOpen = false">Cancel</UButton>
-            <UButton color="error" :loading="isLoading" @click="onDelete">Remove</UButton>
-          </div>
         </UCard>
       </template>
     </UModal>

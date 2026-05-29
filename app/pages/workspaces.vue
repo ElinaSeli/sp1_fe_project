@@ -6,6 +6,7 @@ definePageMeta({ layout: 'dashboard' })
 const workspacesStore = useWorkspacesStore()
 const { workspaces, activeWorkspaceId, isLoading, error } = storeToRefs(workspacesStore)
 const toast = useToast()
+const confirm = useConfirm()
 
 // --- Create ---
 const isCreateOpen = ref(false)
@@ -38,6 +39,32 @@ async function onCreateSubmit() {
   isCreateOpen.value = false
   createState.name = ''
   createState.description = ''
+}
+
+// --- Delete ---
+async function onDelete(ws: { id: string; name: string }) {
+  const isActive = ws.id === activeWorkspaceId.value
+  const ok = await confirm({
+    title: `Delete "${ws.name}"?`,
+    description: isActive
+      ? 'You will be switched to another workspace.'
+      : 'This action cannot be undone.',
+    confirmLabel: 'Delete',
+    confirmColor: 'error',
+    icon: 'i-lucide-trash-2'
+  })
+  if (!ok) return
+  const success = await workspacesStore.deleteWorkspace(ws.id)
+  if (success) {
+    toast.add({ title: `"${ws.name}" deleted`, color: 'success', icon: 'i-lucide-check-circle' })
+  } else {
+    toast.add({
+      title: `Cannot delete "${ws.name}"`,
+      description: 'Remove all time entries from this workspace first.',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+  }
 }
 
 // --- Switch ---
@@ -178,15 +205,13 @@ onMounted(() => workspacesStore.fetchWorkspaces())
             Created {{ formatDate(ws.createdAt) }}
           </span>
           <UButton
-            v-if="ws.id !== activeWorkspaceId"
             size="xs"
-            color="primary"
-            variant="soft"
+            color="error"
+            variant="ghost"
+            icon="i-lucide-trash-2"
             class="opacity-0 group-hover:opacity-100 transition-opacity"
-            @click.stop="switchWorkspace(ws.id)"
-          >
-            Switch
-          </UButton>
+            @click.stop="onDelete(ws)"
+          />
         </div>
       </div>
     </div>

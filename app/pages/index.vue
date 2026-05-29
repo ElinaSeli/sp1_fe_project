@@ -11,6 +11,7 @@ const issuesStore = useIssuesStore()
 const tagsStore = useTagsStore()
 const workspacesStore = useWorkspacesStore()
 const toast = useToast()
+const confirm = useConfirm()
 
 const dialogOpen = ref(false)
 const editingEntry = ref<TimeEntry | null>(null)
@@ -32,13 +33,19 @@ function onSaved(_entry: TimeEntry) {
 }
 
 async function deleteEntry(id: string) {
-  if (confirm('Are you sure you want to delete this time entry?')) {
-    const success = await timerStore.deleteEntry(id)
-    if (success) {
-      toast.add({ title: 'Entry deleted', color: 'success' })
-    } else {
-      toast.add({ title: 'Failed to delete entry', color: 'error' })
-    }
+  const ok = await confirm({
+    title: 'Delete time entry?',
+    description: 'This action cannot be undone.',
+    confirmLabel: 'Delete',
+    confirmColor: 'error',
+    icon: 'i-lucide-trash-2'
+  })
+  if (!ok) return
+  const success = await timerStore.deleteEntry(id)
+  if (success) {
+    toast.add({ title: 'Entry deleted', color: 'success' })
+  } else {
+    toast.add({ title: 'Failed to delete entry', color: 'error' })
   }
 }
 

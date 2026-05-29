@@ -38,6 +38,11 @@ export const workspacesService = {
     })
   },
 
+  async delete(id: string): Promise<ServiceResponse<null>> {
+    const { request } = useApiClient()
+    return request<null>(`/api/workspaces/${id}`, { method: 'DELETE' })
+  },
+
   /**
    * Add a member to a workspace.
    */

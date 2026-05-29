@@ -8,6 +8,7 @@ const projectsStore = useProjectsStore()
 const workspacesStore = useWorkspacesStore()
 const { projects, isLoading, error } = storeToRefs(projectsStore)
 const toast = useToast()
+const confirm = useConfirm()
 
 const columns = [
   { id: 'name', key: 'name', label: 'Name' },
@@ -69,6 +70,14 @@ async function onEditSubmit() {
 
 // --- Delete ---
 async function onDelete(project: Project) {
+  const confirmed = await confirm({
+    title: `Delete "${project.name}"?`,
+    description: 'This will remove the project permanently.',
+    confirmLabel: 'Delete',
+    confirmColor: 'error',
+    icon: 'i-lucide-trash-2'
+  })
+  if (!confirmed) return
   const ok = await projectsStore.deleteProject(project.id)
   if (!ok) {
     toast.add({
