@@ -77,6 +77,19 @@ const formatDuration = (seconds: number) => {
   return `${h}h ${m}m`
 }
 
+const formatTimeRange = (start: string, end: string | null | undefined) => {
+  const formatTime = (dateStr: string) => {
+    return new Date(dateStr).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
+  }
+  const startStr = formatTime(start)
+  const endStr = end ? formatTime(end) : 'Now'
+  return `${startStr} - ${endStr}`
+}
+
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)
   const today = new Date()
@@ -149,9 +162,16 @@ const groupedEntries = computed(() => {
           </div>
 
           <div class="flex items-center gap-2">
-            <span class="text-sm font-mono font-medium text-gray-600 dark:text-gray-400 mr-4">
-              {{ formatDuration(entry.duration) }}
-            </span>
+            <div class="flex flex-col items-end mr-4">
+              <span
+                class="text-[11px] text-gray-400 dark:text-gray-500 font-medium tracking-tight whitespace-nowrap"
+              >
+                {{ formatTimeRange(entry.timeStart, entry.timeEnd) }}
+              </span>
+              <span class="text-sm font-mono font-medium text-gray-600 dark:text-gray-400">
+                {{ formatDuration(entry.duration) }}
+              </span>
+            </div>
             <UButton
               icon="i-lucide-pencil"
               variant="ghost"

@@ -242,4 +242,5 @@ export interface TimeEntryViewModel {
   projectId: string | null
   duration: number
   timeStart: string
+  timeEnd: string | null
 }
