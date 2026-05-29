@@ -74,6 +74,28 @@ export const useWorkspacesStore = defineStore(
       }
     }
 
+    async function deleteWorkspace(id: string): Promise<boolean> {
+      isLoading.value = true
+      error.value = null
+      try {
+        const response = await workspacesService.delete(id)
+        if (response.error) {
+          error.value = response.error
+          return false
+        }
+        workspaces.value = workspaces.value.filter((w) => w.id !== id)
+        if (activeWorkspaceId.value === id) {
+          activeWorkspaceId.value = workspaces.value.length > 0 ? workspaces.value[0]!.id : null
+        }
+        return true
+      } catch (e: unknown) {
+        error.value = e instanceof Error ? e.message : 'Failed to delete workspace'
+        return false
+      } finally {
+        isLoading.value = false
+      }
+    }
+
     return {
       workspaces,
       activeWorkspaceId,
@@ -83,7 +105,8 @@ export const useWorkspacesStore = defineStore(
       setWorkspaces,
       setActiveWorkspace,
       fetchWorkspaces,
-      createWorkspace
+      createWorkspace,
+      deleteWorkspace
     }
   },
   {
