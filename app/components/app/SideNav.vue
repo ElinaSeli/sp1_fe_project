@@ -144,17 +144,16 @@ const onLogout = async () => {
       </NuxtLink>
 
       <!-- Row 2: Theme -->
-      <div class="flex items-center" :class="isMini ? 'flex-col gap-2' : 'justify-start px-2'">
-        <UButton
-          :icon="isDark ? 'i-lucide-moon' : 'i-lucide-sun'"
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          class="justify-center -mx-2"
-          :label="isMini ? '' : 'Appearance'"
-          @click="isDark = !isDark"
-        />
-      </div>
+      <UButton
+        :icon="isDark ? 'i-lucide-moon' : 'i-lucide-sun'"
+        variant="ghost"
+        color="neutral"
+        size="sm"
+        class="w-full justify-start text-gray-500 px-3"
+        :class="isMini ? 'justify-center' : ''"
+        :label="isMini ? '' : 'Appearance'"
+        @click="isDark = !isDark"
+      />
 
       <!-- Row 3: Logout -->
       <UButton
