@@ -37,20 +37,10 @@ onMounted(async () => {
       <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Issues</h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Issues are synced from your external integrations
+          Issues are synced from your external integrations and cannot be added, edited nor deleted
+          manually
         </p>
       </div>
-    </div>
-
-    <!-- Info banner -->
-    <div
-      class="flex items-start gap-3 rounded-xl border border-blue-100 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 p-4"
-    >
-      <UIcon name="i-lucide-info" class="text-blue-500 mt-0.5 shrink-0" />
-      <p class="text-sm text-blue-700 dark:text-blue-300">
-        Issues are automatically imported from your connected integrations (e.g. GitLab, Jira). You
-        cannot create or delete issues manually.
-      </p>
     </div>
 
     <!-- Table -->
