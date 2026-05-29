@@ -42,6 +42,15 @@ async function deleteEntry(id: string) {
   }
 }
 
+async function resumeEntry(id: string) {
+  const success = await timerStore.resumeEntry(id)
+  if (success) {
+    toast.add({ title: 'Timer started', color: 'success' })
+  } else {
+    toast.add({ title: 'Failed to start timer', color: 'error' })
+  }
+}
+
 const onOpenNewTimeEntry = () => openCreate()
 const onCreateNew = () => openCreate()
 const onEditLastTimeEntry = () => {
@@ -172,6 +181,14 @@ const groupedEntries = computed(() => {
                 {{ formatDuration(entry.duration) }}
               </span>
             </div>
+            <UButton
+              icon="i-lucide-play"
+              variant="ghost"
+              color="primary"
+              size="xs"
+              class="hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-600"
+              @click="resumeEntry(entry.id)"
+            />
             <UButton
               icon="i-lucide-pencil"
               variant="ghost"
