@@ -123,7 +123,11 @@ const onLogout = async () => {
     <!-- Bottom Panel -->
     <div class="p-4 border-t border-gray-200 dark:border-gray-800 shrink-0 space-y-2">
       <!-- Row 1: Account -->
-      <div v-if="!isMini" class="flex items-center gap-3 px-2">
+      <NuxtLink
+        v-if="!isMini"
+        to="/settings"
+        class="flex items-center gap-3 px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors cursor-pointer -mx-2"
+      >
         <UAvatar
           :alt="authStore.currentUser?.username || 'U'"
           size="sm"
@@ -137,25 +141,18 @@ const onLogout = async () => {
             Free Plan
           </p>
         </div>
-      </div>
+      </NuxtLink>
 
-      <!-- Row 2: Theme + Notifications -->
-      <div class="flex items-center" :class="isMini ? 'flex-col gap-2' : 'justify-between'">
+      <!-- Row 2: Theme -->
+      <div class="flex items-center" :class="isMini ? 'flex-col gap-2' : 'justify-start px-2'">
         <UButton
           :icon="isDark ? 'i-lucide-moon' : 'i-lucide-sun'"
           variant="ghost"
           color="neutral"
           size="sm"
-          class="justify-center"
+          class="justify-center -mx-2"
           :label="isMini ? '' : 'Appearance'"
           @click="isDark = !isDark"
-        />
-        <UButton
-          icon="i-lucide-bell"
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          class="justify-center"
         />
       </div>
 
