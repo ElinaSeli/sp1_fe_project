@@ -176,7 +176,7 @@ const calendarDays = computed(() => {
   for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
     days.push(new Date(y, m, i))
   }
-  const remaining = 42 - days.length
+  const remaining = 35 - days.length
   for (let i = 1; i <= remaining; i++) {
     days.push(new Date(y, m + 1, i))
   }
@@ -323,12 +323,12 @@ function getEntryStyle(
 </script>
 
 <template>
-  <div class="h-full flex flex-col p-6 max-w-7xl mx-auto w-full gap-6">
+  <div class="h-full flex flex-col p-4 max-w-7xl mx-auto w-full gap-3">
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <UIcon name="i-lucide-calendar" class="text-primary-500 w-7 h-7" />
-          Dashboard
+          Calendar
         </h1>
         <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
           Calendar overview of your time entries
@@ -336,26 +336,29 @@ function getEntryStyle(
       </div>
 
       <div class="flex items-center gap-4">
-        <UButtonGroup size="sm" orientation="horizontal">
+        <div class="flex items-center gap-1.5">
           <UButton
             label="Month"
+            size="sm"
             :color="viewMode === 'month' ? 'primary' : 'neutral'"
             :variant="viewMode === 'month' ? 'solid' : 'soft'"
             @click="viewMode = 'month'"
           />
           <UButton
             label="Week"
+            size="sm"
             :color="viewMode === 'week' ? 'primary' : 'neutral'"
             :variant="viewMode === 'week' ? 'solid' : 'soft'"
             @click="viewMode = 'week'"
           />
           <UButton
             label="Day"
+            size="sm"
             :color="viewMode === 'day' ? 'primary' : 'neutral'"
             :variant="viewMode === 'day' ? 'solid' : 'soft'"
             @click="viewMode = 'day'"
           />
-        </UButtonGroup>
+        </div>
         <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
         <UButton variant="soft" color="primary" @click="goToday">Today</UButton>
         <div
@@ -387,14 +390,20 @@ function getEntryStyle(
       <!-- Header (Days of week) -->
       <div
         v-if="viewMode !== 'day'"
-        class="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 shrink-0"
+        class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 shrink-0 flex"
       >
         <div
-          v-for="day in weekDays"
-          :key="day"
-          class="p-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider"
-        >
-          {{ day }}
+          v-if="viewMode === 'week'"
+          class="w-14 shrink-0 border-r border-gray-200 dark:border-gray-700"
+        ></div>
+        <div class="flex-1 grid grid-cols-7">
+          <div
+            v-for="day in weekDays"
+            :key="day"
+            class="p-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider"
+          >
+            {{ day }}
+          </div>
         </div>
       </div>
       <div
@@ -411,7 +420,7 @@ function getEntryStyle(
       </div>
 
       <!-- Month View Body -->
-      <div v-if="viewMode === 'month'" class="flex-1 grid grid-cols-7 grid-rows-6 h-full min-h-0">
+      <div v-if="viewMode === 'month'" class="flex-1 grid grid-cols-7 grid-rows-5 h-full min-h-0">
         <div
           v-for="(day, idx) in calendarDays"
           :key="idx"
@@ -419,7 +428,7 @@ function getEntryStyle(
           :class="{
             'bg-gray-50/50 dark:bg-gray-900/20 opacity-60': day.getMonth() !== currentMonth,
             'border-r-0': (idx + 1) % 7 === 0,
-            'border-b-0': idx >= 35
+            'border-b-0': idx >= 28
           }"
           @click.self="openCreate(day)"
         >
@@ -503,7 +512,7 @@ function getEntryStyle(
               <div
                 v-for="h in hours"
                 :key="h"
-                class="flex-1 border-t border-gray-100 dark:border-gray-800"
+                class="flex-1 border-t border-gray-200 dark:border-gray-600"
               ></div>
             </div>
 
@@ -512,7 +521,7 @@ function getEntryStyle(
               <div
                 v-for="(day, idx) in calendarDays"
                 :key="idx"
-                class="flex-1 border-r border-gray-100 dark:border-gray-700/50 relative flex flex-col"
+                class="flex-1 border-r border-gray-200 dark:border-gray-600 relative flex flex-col"
               >
                 <div
                   v-for="h in hours"
