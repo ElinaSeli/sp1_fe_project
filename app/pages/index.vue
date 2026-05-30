@@ -61,6 +61,12 @@ function onDialogSaved() {
 // --- View State ---
 const viewMode = ref<'month' | 'week' | 'day'>('month')
 const currentDate = ref(new Date())
+
+function goToDayView(day: Date) {
+  viewMode.value = 'day'
+  currentDate.value = day
+}
+
 const currentMonth = computed(() => currentDate.value.getMonth())
 
 const monthName = computed(() => {
@@ -457,10 +463,7 @@ function getEntryStyle(
             <div
               v-if="(entriesByDate.get(formatDateStr(day)) || []).length > 1"
               class="text-[9px] font-semibold text-gray-500 dark:text-gray-400 text-center cursor-pointer pointer-events-auto hover:text-primary-500"
-              @click.stop="
-                viewMode = 'day'
-                currentDate = day
-              "
+              @click.stop="goToDayView(day)"
             >
               +{{ (entriesByDate.get(formatDateStr(day)) || []).length - 1 }} more
             </div>
