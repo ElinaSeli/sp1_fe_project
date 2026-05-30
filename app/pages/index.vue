@@ -430,7 +430,7 @@ function getEntryStyle(
             'border-r-0': (idx + 1) % 7 === 0,
             'border-b-0': idx >= 28
           }"
-          @click.self="openCreate(day)"
+          @click="openCreate(day)"
         >
           <div class="flex justify-between items-center pointer-events-none">
             <span
