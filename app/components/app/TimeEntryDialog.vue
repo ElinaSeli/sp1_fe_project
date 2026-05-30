@@ -4,6 +4,8 @@ import type { TimeEntry, CreateTimeEntryRequest, UpdateTimeEntryRequest } from '
 const props = defineProps<{
   open: boolean
   entry?: TimeEntry | null
+  initialTimeStart?: Date | null
+  initialTimeEnd?: Date | null
 }>()
 
 const emit = defineEmits<{
@@ -71,8 +73,12 @@ watch(
       form.projectId = undefined
       form.issueId = undefined
       form.tagIds = []
-      form.timeStart = defaultStart()
-      form.timeEnd = defaultEnd()
+      form.timeStart = props.initialTimeStart
+        ? toLocalInput(props.initialTimeStart.toISOString())
+        : defaultStart()
+      form.timeEnd = props.initialTimeEnd
+        ? toLocalInput(props.initialTimeEnd.toISOString())
+        : defaultEnd()
     }
   }
 )
