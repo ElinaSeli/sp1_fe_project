@@ -16,10 +16,16 @@ import { useApiClient } from '~/composables/useApiClient'
 export const timeEntriesService = {
   /**
    * Fetch all time entries for a specific workspace.
+   * Supports optional pagination and date filtering.
    */
-  async getAll(workspaceId: string): Promise<ServiceResponse<TimeEntry[]>> {
+  async getAll(
+    workspaceId: string,
+    params?: { startDate?: string; endDate?: string; page?: number; size?: number }
+  ): Promise<ServiceResponse<TimeEntry[]>> {
     const { request } = useApiClient()
-    return request<TimeEntry[]>(`/api/workspaces/${workspaceId}/time-entries`)
+    return request<TimeEntry[]>(`/api/workspaces/${workspaceId}/time-entries`, {
+      params
+    })
   },
 
   /**

@@ -27,11 +27,22 @@ export const useTimerStore = defineStore(
     const entries = ref<TimeEntryViewModel[]>([])
     const rawEntries = ref<TimeEntry[]>([])
 
-    async function fetchEntries() {
+    async function fetchEntries(params?: {
+      startDate?: string
+      endDate?: string
+      page?: number
+      size?: number
+    }) {
       const workspacesStore = useWorkspacesStore()
       if (!workspacesStore.activeWorkspaceId) return
 
-      const response = await timeEntriesService.getAll(workspacesStore.activeWorkspaceId)
+      // Temporary hack: if no params are passed, we ask for size: 100 to populate the calendar
+      const fetchParams = params || { size: 100 }
+
+      const response = await timeEntriesService.getAll(
+        workspacesStore.activeWorkspaceId,
+        fetchParams
+      )
       if (response.data) {
         // Defensive: Extract .content if the backend returns a PagedResponse, otherwise fallback to array
         const listData = Array.isArray(response.data)

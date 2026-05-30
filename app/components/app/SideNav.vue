@@ -11,9 +11,9 @@ const route = useRoute()
 const colorMode = useColorMode()
 
 const navLinks = [
-  { to: '/', icon: 'i-lucide-layout-dashboard', label: 'Dashboard' },
+  { to: '/time-entries', icon: 'i-lucide-list', label: 'Time Entries' },
+  { to: '/', icon: 'i-lucide-calendar', label: 'Calendar' },
   { to: '/projects', icon: 'i-lucide-folder', label: 'Projects' },
-  { to: '/issues', icon: 'i-lucide-list-checks', label: 'Issues' },
   { to: '/tags', icon: 'i-lucide-tag', label: 'Tags' },
   { to: '/reports', icon: 'i-lucide-bar-chart-3', label: 'Reports' },
   { to: '/workspaces', icon: 'i-lucide-briefcase', label: 'Workspaces' },
