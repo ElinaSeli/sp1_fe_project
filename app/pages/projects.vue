@@ -7,6 +7,7 @@ definePageMeta({ layout: 'dashboard' })
 const projectsStore = useProjectsStore()
 const workspacesStore = useWorkspacesStore()
 const { projects, isLoading, error } = storeToRefs(projectsStore)
+const { activeWorkspaceId } = storeToRefs(workspacesStore)
 const toast = useToast()
 const confirm = useConfirm()
 
@@ -102,6 +103,10 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('app:createNew', onCreateNew)
+})
+
+watch(activeWorkspaceId, (id) => {
+  if (id) projectsStore.fetchProjects()
 })
 </script>
 

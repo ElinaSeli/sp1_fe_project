@@ -161,23 +161,6 @@ watch(activeWorkspaceId, (id) => {
         />
       </div>
 
-      <!-- Error state -->
-      <div
-        v-else-if="error && !integration"
-        class="flex flex-col items-center py-16 text-center gap-3"
-      >
-        <UIcon name="i-lucide-wifi-off" class="text-4xl text-red-400" />
-        <p class="text-sm text-red-500">{{ error }}</p>
-        <UButton
-          variant="soft"
-          color="neutral"
-          size="sm"
-          @click="integrationStore.fetchIntegration(activeWorkspaceId!)"
-        >
-          Retry
-        </UButton>
-      </div>
-
       <!-- Empty state -->
       <div
         v-else-if="!isLoading && !integration"

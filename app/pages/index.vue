@@ -10,6 +10,7 @@ const projectsStore = useProjectsStore()
 const issuesStore = useIssuesStore()
 const tagsStore = useTagsStore()
 const workspacesStore = useWorkspacesStore()
+const { activeWorkspaceId } = storeToRefs(workspacesStore)
 const toast = useToast()
 const confirm = useConfirm()
 
@@ -85,6 +86,16 @@ onUnmounted(() => {
   window.removeEventListener('app:openNewTimeEntry', onOpenNewTimeEntry)
   window.removeEventListener('app:createNew', onCreateNew)
   window.removeEventListener('app:editLastTimeEntry', onEditLastTimeEntry)
+})
+
+watch(activeWorkspaceId, (id) => {
+  if (id)
+    Promise.all([
+      timerStore.fetchEntries(),
+      projectsStore.fetchProjects(),
+      issuesStore.fetchIssues(),
+      tagsStore.fetchTags()
+    ])
 })
 
 const formatDuration = (seconds: number) => {
@@ -171,7 +182,10 @@ const groupedEntries = computed(() => {
                 <span
                   class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded"
                 >
-                  {{ entry.projectId || 'No Project' }}
+                  {{
+                    projectsStore.projects.find((p) => p.id === entry.projectId)?.name ||
+                    'No Project'
+                  }}
                 </span>
               </div>
             </div>

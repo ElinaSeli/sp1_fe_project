@@ -7,6 +7,7 @@ definePageMeta({ layout: 'dashboard' })
 const tagsStore = useTagsStore()
 const workspacesStore = useWorkspacesStore()
 const { tags, isLoading, error } = storeToRefs(tagsStore)
+const { activeWorkspaceId } = storeToRefs(workspacesStore)
 const toast = useToast()
 
 const columns = [
@@ -46,6 +47,10 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('app:createNew', onCreateNew)
+})
+
+watch(activeWorkspaceId, (id) => {
+  if (id) tagsStore.fetchTags()
 })
 </script>
 
