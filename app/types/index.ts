@@ -98,6 +98,7 @@ export interface CreateIssueRequest {
 export interface Tag {
   id: string
   workspaceId: string
+  projectId: string
   name: string
   color?: string | null
   isImported: boolean
@@ -105,6 +106,7 @@ export interface Tag {
 }
 
 export interface CreateTagRequest {
+  projectId: string
   name: string
   color?: string | null
 }

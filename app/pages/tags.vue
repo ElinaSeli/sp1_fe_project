@@ -6,20 +6,25 @@ definePageMeta({ layout: 'dashboard' })
 
 const tagsStore = useTagsStore()
 const workspacesStore = useWorkspacesStore()
+const projectsStore = useProjectsStore()
 const { tags, isLoading, error } = storeToRefs(tagsStore)
 const { activeWorkspaceId } = storeToRefs(workspacesStore)
+const { projects } = storeToRefs(projectsStore)
 const toast = useToast()
+const confirm = useConfirm()
 
 const columns = [
   { id: 'name', key: 'name', label: 'Name' },
-  { id: 'color', key: 'color', label: 'Color' }
+  { id: 'projectId', key: 'projectId', label: 'Project' },
+  { id: 'color', key: 'color', label: 'Color' },
+  { id: 'actions', key: 'actions' }
 ]
 
 const isCreateOpen = ref(false)
-const state = reactive<CreateTagRequest>({ name: '', color: '#10b981' })
+const state = reactive<CreateTagRequest>({ projectId: '', name: '', color: '#10b981' })
 
 async function onSubmit() {
-  if (!state.name.trim()) return
+  if (!state.name.trim() || !state.projectId) return
 
   const result = await tagsStore.createTag({ ...state })
   if (!result) {
@@ -31,6 +36,7 @@ async function onSubmit() {
     return
   }
   isCreateOpen.value = false
+  state.projectId = ''
   state.name = ''
   state.color = '#10b981'
 }
@@ -39,9 +45,42 @@ const onCreateNew = () => {
   isCreateOpen.value = true
 }
 
+async function onDeleteTag(tag: (typeof tags.value)[0]) {
+  const isConfirmed = await confirm({
+    title: 'Delete Tag',
+    description: `Are you sure you want to delete the tag "${tag.name}"? This action cannot be undone.`,
+    confirmLabel: 'Delete',
+    cancelLabel: 'Cancel',
+    confirmColor: 'error'
+  })
+
+  if (!isConfirmed) return
+
+  if (!tag.projectId) {
+    toast.add({
+      title: 'Error',
+      description: 'Cannot delete tag: missing project ID',
+      color: 'error'
+    })
+    return
+  }
+
+  const success = await tagsStore.deleteTag(tag.projectId, tag.id)
+  if (success) {
+    toast.add({ title: 'Tag deleted successfully', color: 'primary' })
+  } else {
+    toast.add({
+      title: 'Failed to delete tag',
+      description: error.value ?? 'Unknown error',
+      color: 'error'
+    })
+  }
+}
+
 onMounted(async () => {
   window.addEventListener('app:createNew', onCreateNew)
   await workspacesStore.fetchWorkspaces()
+  await projectsStore.fetchProjects()
   await tagsStore.fetchTags()
 })
 
@@ -50,7 +89,10 @@ onUnmounted(() => {
 })
 
 watch(activeWorkspaceId, (id) => {
-  if (id) tagsStore.fetchTags()
+  if (id) {
+    projectsStore.fetchProjects()
+    tagsStore.fetchTags()
+  }
 })
 </script>
 
@@ -71,6 +113,11 @@ watch(activeWorkspaceId, (id) => {
         <template #name-cell="{ row }">
           <span class="font-medium text-gray-900 dark:text-white">{{ row.original.name }}</span>
         </template>
+        <template #projectId-cell="{ row }">
+          <span class="text-sm text-gray-600 dark:text-gray-300">
+            {{ projects.find((p) => p.id === row.original.projectId)?.name ?? '—' }}
+          </span>
+        </template>
         <template #color-cell="{ row }">
           <div class="flex items-center gap-2">
             <div
@@ -78,6 +125,17 @@ watch(activeWorkspaceId, (id) => {
               :style="{ backgroundColor: row.original.color ?? '#6b7280' }"
             />
             <span class="text-xs font-mono text-gray-400">{{ row.original.color ?? '—' }}</span>
+          </div>
+        </template>
+        <template #actions-cell="{ row }">
+          <div class="flex justify-end gap-1">
+            <UButton
+              icon="i-lucide-trash-2"
+              color="error"
+              variant="ghost"
+              size="sm"
+              @click="onDeleteTag(row.original)"
+            />
           </div>
         </template>
         <template #empty>
@@ -101,6 +159,17 @@ watch(activeWorkspaceId, (id) => {
           </template>
 
           <form class="space-y-4" @submit.prevent="onSubmit">
+            <UFormField label="Project" name="projectId" required>
+              <USelectMenu
+                v-model="state.projectId"
+                :items="projects"
+                value-key="id"
+                label-key="name"
+                placeholder="Select project"
+                class="w-full"
+              />
+            </UFormField>
+
             <UFormField label="Tag Name" name="name" required>
               <UInput
                 v-model="state.name"
@@ -129,7 +198,7 @@ watch(activeWorkspaceId, (id) => {
                 type="submit"
                 color="primary"
                 :loading="isLoading"
-                :disabled="!state.name.trim()"
+                :disabled="!state.name.trim() || !state.projectId"
               >
                 Create Tag
               </UButton>
