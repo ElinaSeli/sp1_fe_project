@@ -100,7 +100,7 @@
             stroke-width="3"
             stroke-linecap="round"
             stroke-linejoin="round"
-            class="ml-2 text-emerald-500 shrink-0"
+            class="ml-2 text-primary-500 shrink-0"
           >
             <polyline points="20 6 9 17 4 12" />
           </svg>

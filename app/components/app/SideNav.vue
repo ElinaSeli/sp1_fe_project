@@ -48,7 +48,7 @@ const onLogout = async () => {
   >
     <!-- Top Header / Toggle -->
     <div class="p-6 flex items-center" :class="isMini ? 'justify-center' : 'justify-between'">
-      <AppLogo v-if="!isMini" class="h-8 w-auto text-emerald-600 dark:text-emerald-400" />
+      <AppLogo v-if="!isMini" class="h-8 w-auto text-primary-600 dark:text-primary-400" />
       <UButton
         :icon="isMini ? 'i-lucide-chevron-right' : 'i-lucide-chevron-left'"
         variant="ghost"
@@ -90,7 +90,7 @@ const onLogout = async () => {
             class="w-full"
             placeholder="Select Workspace"
             :ui="{
-              base: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors'
+              base: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:border-primary-500 dark:hover:border-primary-500 transition-colors'
             }"
           >
             <template #leading>
@@ -131,7 +131,7 @@ const onLogout = async () => {
         <UAvatar
           :alt="authStore.currentUser?.username || 'U'"
           size="sm"
-          class="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold"
+          class="bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 font-bold"
         />
         <div class="flex-1 min-w-0">
           <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">

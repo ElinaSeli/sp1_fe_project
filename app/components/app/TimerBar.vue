@@ -158,7 +158,7 @@ onUnmounted(() => {
       class="flex-1 w-full md:w-auto order-last md:order-none mt-3 md:mt-0 flex flex-col md:flex-row items-center flex-wrap gap-x-1 gap-y-2 px-3 py-2 mx-0 sm:mx-4 rounded-lg border transition-all duration-300"
       :class="
         timerBarFocused
-          ? 'border-emerald-500/50 bg-white dark:bg-gray-800 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
+          ? 'border-primary-500/50 bg-white dark:bg-gray-800 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
           : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40'
       "
       @focusin="timerBarFocused = true"
@@ -213,7 +213,7 @@ onUnmounted(() => {
     <!-- Right: Controls -->
     <div class="flex items-center gap-2 sm:gap-6 shrink-0">
       <div
-        class="text-xl sm:text-2xl font-mono font-medium tracking-wider text-emerald-500 w-20 sm:w-32 text-right"
+        class="text-xl sm:text-2xl font-mono font-medium tracking-wider text-primary-500 w-20 sm:w-32 text-right"
       >
         {{ formatDuration(elapsedSeconds) }}
       </div>

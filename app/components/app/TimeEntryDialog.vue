@@ -166,7 +166,7 @@ async function onDelete() {
           <div class="flex items-center gap-3">
             <UIcon
               :name="isEdit ? 'i-lucide-pencil' : 'i-lucide-clock-plus'"
-              class="text-emerald-500"
+              class="text-primary-500"
             />
             <h2 class="text-lg font-semibold">
               {{ isEdit ? 'Edit Time Entry' : 'New Time Entry' }}
@@ -228,7 +228,7 @@ async function onDelete() {
                 v-model="form.timeStart"
                 type="datetime-local"
                 required
-                class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </UFormField>
 
@@ -237,7 +237,7 @@ async function onDelete() {
                 v-model="form.timeEnd"
                 type="datetime-local"
                 required
-                class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </UFormField>
           </div>

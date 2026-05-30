@@ -133,9 +133,9 @@ onMounted(() => workspacesStore.fetchWorkspaces())
       class="flex flex-col items-center py-20 text-center gap-4"
     >
       <div
-        class="w-20 h-20 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center mb-2"
+        class="w-20 h-20 rounded-2xl bg-primary-50 dark:bg-primary-950/40 flex items-center justify-center mb-2"
       >
-        <UIcon name="i-lucide-layout-dashboard" class="text-4xl text-emerald-500" />
+        <UIcon name="i-lucide-layout-dashboard" class="text-4xl text-primary-500" />
       </div>
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white">No workspaces yet</h2>
       <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
@@ -155,17 +155,17 @@ onMounted(() => workspacesStore.fetchWorkspaces())
         class="relative rounded-xl border transition-all duration-200 p-5 flex flex-col gap-3 cursor-pointer group"
         :class="
           ws.id === activeWorkspaceId
-            ? 'border-emerald-400 dark:border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/20 shadow-sm shadow-emerald-100 dark:shadow-emerald-900/30'
-            : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-sm'
+            ? 'border-primary-400 dark:border-primary-600 bg-primary-50/60 dark:bg-primary-950/20 shadow-sm shadow-primary-100 dark:shadow-primary-900/30'
+            : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-sm'
         "
         @click="switchWorkspace(ws.id)"
       >
         <!-- Active indicator -->
         <div
           v-if="ws.id === activeWorkspaceId"
-          class="absolute top-3 right-3 flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+          class="absolute top-3 right-3 flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400"
         >
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span class="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />
           Active
         </div>
 
@@ -175,8 +175,8 @@ onMounted(() => workspacesStore.fetchWorkspaces())
             class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors"
             :class="
               ws.id === activeWorkspaceId
-                ? 'bg-emerald-100 dark:bg-emerald-900/50'
-                : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/40'
+                ? 'bg-primary-100 dark:bg-primary-900/50'
+                : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-primary-50 dark:group-hover:bg-primary-950/40'
             "
           >
             <UIcon
@@ -184,8 +184,8 @@ onMounted(() => workspacesStore.fetchWorkspaces())
               class="transition-colors"
               :class="
                 ws.id === activeWorkspaceId
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : 'text-gray-400 group-hover:text-emerald-500'
+                  ? 'text-primary-600 dark:text-primary-400'
+                  : 'text-gray-400 group-hover:text-primary-500'
               "
             />
           </div>
@@ -222,7 +222,7 @@ onMounted(() => workspacesStore.fetchWorkspaces())
         <UCard>
           <template #header>
             <div class="flex items-center gap-3">
-              <UIcon name="i-lucide-layout-dashboard" class="text-emerald-500" />
+              <UIcon name="i-lucide-layout-dashboard" class="text-primary-500" />
               <h2 class="text-lg font-semibold">New Workspace</h2>
             </div>
           </template>

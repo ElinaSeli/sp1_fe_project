@@ -95,7 +95,7 @@ watch(activeWorkspaceId, (id) => {
         <UCard>
           <template #header>
             <div class="flex items-center gap-3">
-              <UIcon name="i-lucide-tag" class="text-emerald-500" />
+              <UIcon name="i-lucide-tag" class="text-primary-500" />
               <h2 class="text-lg font-semibold">New Tag</h2>
             </div>
           </template>

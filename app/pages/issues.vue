@@ -56,7 +56,7 @@ watch(activeWorkspaceId, (id) => {
         </template>
         <template #projectName-cell="{ row }">
           <span
-            class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+            class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950 text-primary-700 dark:text-primary-300"
           >
             <UIcon name="i-lucide-folder" class="text-[10px]" />
             {{ row.original.projectName }}
