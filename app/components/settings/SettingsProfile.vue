@@ -14,7 +14,52 @@ const password = reactive({
   confirm: ''
 })
 
+const appConfig = useAppConfig()
+const primaryColor = ref(appConfig.ui.colors.primary)
+const showAllColors = ref(false)
+
+const colorOptions = [
+  // Top 9 recommended / diverse colors
+  { name: 'emerald', bgClass: 'bg-emerald-500', ringClass: 'ring-emerald-500' },
+  { name: 'blue', bgClass: 'bg-blue-500', ringClass: 'ring-blue-500' },
+  { name: 'indigo', bgClass: 'bg-indigo-500', ringClass: 'ring-indigo-500' },
+  { name: 'violet', bgClass: 'bg-violet-500', ringClass: 'ring-violet-500' },
+  { name: 'rose', bgClass: 'bg-rose-500', ringClass: 'ring-rose-500' },
+  { name: 'orange', bgClass: 'bg-orange-500', ringClass: 'ring-orange-500' },
+  { name: 'amber', bgClass: 'bg-amber-500', ringClass: 'ring-amber-500' },
+  { name: 'cyan', bgClass: 'bg-cyan-500', ringClass: 'ring-cyan-500' },
+  { name: 'slate', bgClass: 'bg-slate-500', ringClass: 'ring-slate-500' },
+  // Extended colors
+  { name: 'pink', bgClass: 'bg-pink-500', ringClass: 'ring-pink-500' },
+  { name: 'fuchsia', bgClass: 'bg-fuchsia-500', ringClass: 'ring-fuchsia-500' },
+  { name: 'red', bgClass: 'bg-red-500', ringClass: 'ring-red-500' },
+  { name: 'yellow', bgClass: 'bg-yellow-500', ringClass: 'ring-yellow-500' },
+  { name: 'lime', bgClass: 'bg-lime-500', ringClass: 'ring-lime-500' },
+  { name: 'green', bgClass: 'bg-green-500', ringClass: 'ring-green-500' },
+  { name: 'teal', bgClass: 'bg-teal-500', ringClass: 'ring-teal-500' },
+  { name: 'sky', bgClass: 'bg-sky-500', ringClass: 'ring-sky-500' },
+  { name: 'purple', bgClass: 'bg-purple-500', ringClass: 'ring-purple-500' },
+  { name: 'gray', bgClass: 'bg-gray-500', ringClass: 'ring-gray-500' },
+  { name: 'zinc', bgClass: 'bg-zinc-500', ringClass: 'ring-zinc-500' },
+  { name: 'neutral', bgClass: 'bg-neutral-500', ringClass: 'ring-neutral-500' },
+  { name: 'stone', bgClass: 'bg-stone-500', ringClass: 'ring-stone-500' }
+]
+
+const visibleColors = computed(() =>
+  showAllColors.value ? colorOptions : colorOptions.slice(0, 9)
+)
+
 onMounted(async () => {
+  const saved = localStorage.getItem('nuxt-ui-primary')
+  if (saved) {
+    primaryColor.value = saved
+  }
+
+  watch(primaryColor, (newColor) => {
+    localStorage.setItem('nuxt-ui-primary', newColor)
+    appConfig.ui.colors.primary = newColor
+  })
+
   await authStore.fetchUserProfile()
   const u = authStore.currentUser
   if (u) {
@@ -76,6 +121,50 @@ function changePassword() {
           <UButton color="primary" @click="saveAccount">Save changes</UButton>
         </div>
       </template>
+    </UCard>
+
+    <!-- Appearance section -->
+    <UCard>
+      <template #header>
+        <div class="flex items-center gap-2">
+          <UIcon name="i-lucide-palette" class="text-gray-500" />
+          <span class="font-semibold text-gray-800 dark:text-gray-100">Appearance</span>
+        </div>
+      </template>
+
+      <div class="space-y-4 max-w-sm">
+        <UFormField label="Primary Theme Color">
+          <div class="flex flex-wrap gap-3 mt-2 items-center">
+            <button
+              v-for="color in visibleColors"
+              :key="color.name"
+              type="button"
+              class="w-8 h-8 rounded-full shadow-sm ring-2 ring-offset-2 dark:ring-offset-gray-900 transition-all border border-black/10 dark:border-white/10"
+              :class="[
+                color.bgClass,
+                primaryColor === color.name
+                  ? `${color.ringClass} scale-110`
+                  : 'ring-transparent opacity-80 hover:opacity-100 hover:scale-105'
+              ]"
+              :title="color.name"
+              @click="primaryColor = color.name"
+            />
+
+            <!-- Toggle button -->
+            <button
+              type="button"
+              class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors"
+              :title="showAllColors ? 'Show less' : 'Show all colors'"
+              @click="showAllColors = !showAllColors"
+            >
+              <UIcon
+                :name="showAllColors ? 'i-lucide-chevron-up' : 'i-lucide-plus'"
+                class="w-4 h-4"
+              />
+            </button>
+          </div>
+        </UFormField>
+      </div>
     </UCard>
 
     <!-- Password section -->

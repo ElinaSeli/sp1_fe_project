@@ -167,9 +167,9 @@ watch(activeWorkspaceId, (id) => {
         class="flex flex-col items-center py-20 text-center gap-4"
       >
         <div
-          class="w-20 h-20 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center mb-2"
+          class="w-20 h-20 rounded-2xl bg-primary-50 dark:bg-primary-950/40 flex items-center justify-center mb-2"
         >
-          <UIcon name="i-lucide-plug-2" class="text-4xl text-emerald-500" />
+          <UIcon name="i-lucide-plug-2" class="text-4xl text-primary-500" />
         </div>
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">No integrations yet</h2>
         <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
@@ -302,7 +302,7 @@ watch(activeWorkspaceId, (id) => {
               </UButton>
               <div
                 v-if="testStatus === 'success'"
-                class="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400"
+                class="flex items-center gap-1.5 text-sm text-primary-600 dark:text-primary-400"
               >
                 <UIcon name="i-lucide-check-circle" />
                 {{ testMessage }}

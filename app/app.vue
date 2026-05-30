@@ -15,6 +15,14 @@ useHead({
     lang: 'en'
   }
 })
+
+const appConfig = useAppConfig()
+onMounted(() => {
+  const savedColor = localStorage.getItem('nuxt-ui-primary')
+  if (savedColor) {
+    appConfig.ui.colors.primary = savedColor
+  }
+})
 </script>
 
 <template>

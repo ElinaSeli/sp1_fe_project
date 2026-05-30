@@ -146,7 +146,7 @@ watch(activeWorkspaceId, (id) => {
             :class="
               row.original.isImported
                 ? 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300'
-                : 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                : 'bg-primary-50 dark:bg-primary-950 text-primary-700 dark:text-primary-300'
             "
           >
             <UIcon
@@ -189,7 +189,7 @@ watch(activeWorkspaceId, (id) => {
         <UCard>
           <template #header>
             <div class="flex items-center gap-3">
-              <UIcon name="i-lucide-folder-plus" class="text-emerald-500" />
+              <UIcon name="i-lucide-folder-plus" class="text-primary-500" />
               <h2 class="text-lg font-semibold">New Project</h2>
             </div>
           </template>
