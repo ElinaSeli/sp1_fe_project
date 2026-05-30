@@ -57,11 +57,30 @@ export const useTagsStore = defineStore('tags', () => {
     return data
   }
 
+  /**
+   * Delete a tag.
+   */
+  async function deleteTag(projectId: string, tagId: string): Promise<boolean> {
+    const wsId = workspacesStore.activeWorkspaceId
+    if (!wsId) return false
+
+    const { error: err } = await tagsService.delete(wsId, projectId, tagId)
+    if (err) {
+      error.value = err
+      return false
+    }
+
+    // Remove from local state
+    tags.value = tags.value.filter((t) => t.id !== tagId)
+    return true
+  }
+
   return {
     tags,
     isLoading,
     error,
     fetchTags,
-    createTag
+    createTag,
+    deleteTag
   }
 })
