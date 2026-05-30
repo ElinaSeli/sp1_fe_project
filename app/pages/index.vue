@@ -10,6 +10,7 @@ const projectsStore = useProjectsStore()
 const issuesStore = useIssuesStore()
 const tagsStore = useTagsStore()
 const workspacesStore = useWorkspacesStore()
+const { activeWorkspaceId } = storeToRefs(workspacesStore)
 const toast = useToast()
 const confirm = useConfirm()
 
@@ -85,6 +86,16 @@ onUnmounted(() => {
   window.removeEventListener('app:openNewTimeEntry', onOpenNewTimeEntry)
   window.removeEventListener('app:createNew', onCreateNew)
   window.removeEventListener('app:editLastTimeEntry', onEditLastTimeEntry)
+})
+
+watch(activeWorkspaceId, (id) => {
+  if (id)
+    Promise.all([
+      timerStore.fetchEntries(),
+      projectsStore.fetchProjects(),
+      issuesStore.fetchIssues(),
+      tagsStore.fetchTags()
+    ])
 })
 
 const formatDuration = (seconds: number) => {

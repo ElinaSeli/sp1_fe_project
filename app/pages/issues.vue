@@ -8,6 +8,7 @@ const projectsStore = useProjectsStore()
 const workspacesStore = useWorkspacesStore()
 const { issues, isLoading } = storeToRefs(issuesStore)
 const { projects } = storeToRefs(projectsStore)
+const { activeWorkspaceId } = storeToRefs(workspacesStore)
 
 const columns = [
   { id: 'name', key: 'name', label: 'Issue Name' },
@@ -27,6 +28,10 @@ const issueRows = computed(() =>
 onMounted(async () => {
   await workspacesStore.fetchWorkspaces()
   await Promise.all([projectsStore.fetchProjects(), issuesStore.fetchIssues()])
+})
+
+watch(activeWorkspaceId, (id) => {
+  if (id) Promise.all([projectsStore.fetchProjects(), issuesStore.fetchIssues()])
 })
 </script>
 
