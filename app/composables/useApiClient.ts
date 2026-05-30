@@ -50,6 +50,12 @@ export function useApiClient() {
       })
       return { data, error: null }
     } catch (err: unknown) {
+      const status = (err as { status?: number })?.status
+      if (status === 401) {
+        authStore.clearSession()
+        await navigateTo('/login')
+      }
+
       const message =
         (err as { data?: { message?: string }; message?: string })?.data?.message ??
         (err as { message?: string })?.message ??
