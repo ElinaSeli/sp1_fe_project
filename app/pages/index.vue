@@ -171,7 +171,10 @@ const groupedEntries = computed(() => {
                 <span
                   class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded"
                 >
-                  {{ entry.projectId || 'No Project' }}
+                  {{
+                    projectsStore.projects.find((p) => p.id === entry.projectId)?.name ||
+                    'No Project'
+                  }}
                 </span>
               </div>
             </div>
