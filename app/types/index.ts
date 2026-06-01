@@ -81,6 +81,16 @@ export interface CreateProjectRequest {
   color?: string | null
 }
 
+export interface UpdateProjectRequest {
+  name: string
+  description?: string | null
+}
+
+export interface ProjectListResponse {
+  data: Project[]
+  error?: string | null
+}
+
 export interface Issue {
   id: string
   workspaceId: string

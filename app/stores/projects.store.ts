@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Project, CreateProjectRequest } from '~/types'
+import type { Project, CreateProjectRequest, UpdateProjectRequest } from '~/types'
 import { projectsService } from '~/services'
 
 /**
@@ -33,7 +33,10 @@ export const useProjectsStore = defineStore('projects', () => {
         error.value = err
         return
       }
-      projects.value = data ?? []
+      if (data?.error) {
+        error.value = data.error
+      }
+      projects.value = data?.data ?? []
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch projects'
     } finally {
@@ -62,7 +65,7 @@ export const useProjectsStore = defineStore('projects', () => {
    */
   async function updateProject(
     projectId: string,
-    payload: CreateProjectRequest
+    payload: UpdateProjectRequest
   ): Promise<Project | null> {
     const wsId = workspacesStore.activeWorkspaceId
     if (!wsId) return null
