@@ -5,16 +5,22 @@
  * Communicates with the Micronaut backend at /api/workspaces/:workspaceId/projects/*.
  */
 
-import type { Project, CreateProjectRequest, ServiceResponse } from '~/types'
+import type {
+  Project,
+  CreateProjectRequest,
+  UpdateProjectRequest,
+  ProjectListResponse,
+  ServiceResponse
+} from '~/types'
 import { useApiClient } from '~/composables/useApiClient'
 
 export const projectsService = {
   /**
    * Fetch all projects for a given workspace.
    */
-  async getAll(workspaceId: string): Promise<ServiceResponse<Project[]>> {
+  async getAll(workspaceId: string): Promise<ServiceResponse<ProjectListResponse>> {
     const { request } = useApiClient()
-    return request<Project[]>(`/api/workspaces/${workspaceId}/projects`)
+    return request<ProjectListResponse>(`/api/workspaces/${workspaceId}/projects`)
   },
 
   /**
@@ -37,11 +43,11 @@ export const projectsService = {
   async update(
     workspaceId: string,
     projectId: string,
-    payload: CreateProjectRequest
+    payload: UpdateProjectRequest
   ): Promise<ServiceResponse<Project>> {
     const { request } = useApiClient()
     return request<Project>(`/api/workspaces/${workspaceId}/projects/${projectId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: payload
     })
   },
