@@ -269,6 +269,7 @@ async function onDelete() {
               placeholder="Select tags"
               multiple
               class="w-full"
+              :disabled="!form.projectId"
             />
           </UFormField>
 
