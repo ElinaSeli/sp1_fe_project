@@ -28,8 +28,38 @@ export const useTimerStore = defineStore(
       () => draftEntry.value.projectId,
       (newVal, oldVal) => {
         if (oldVal !== null && oldVal !== undefined && newVal !== oldVal) {
-          draftEntry.value.issueId = null
-          draftEntry.value.tagIds = []
+          const issuesStore = useIssuesStore()
+          const tagsStore = useTagsStore()
+
+          // Swap Issue ID
+          if (draftEntry.value.issueId) {
+            const oldIssue = (issuesStore.issues || []).find(
+              (i) => i.id === draftEntry.value.issueId
+            )
+            if (oldIssue) {
+              const newIssue = (issuesStore.issues || []).find(
+                (i) => i.name === oldIssue.name && i.projectId === newVal
+              )
+              draftEntry.value.issueId = newIssue ? newIssue.id : null
+            } else {
+              draftEntry.value.issueId = null
+            }
+          }
+
+          // Swap Tag IDs
+          if (draftEntry.value.tagIds && draftEntry.value.tagIds.length > 0) {
+            const newTagIds: string[] = []
+            for (const oldId of draftEntry.value.tagIds) {
+              const oldTag = (tagsStore.tags || []).find((t) => t.id === oldId)
+              if (oldTag) {
+                const newTag = (tagsStore.tags || []).find(
+                  (t) => t.name === oldTag.name && t.projectId === newVal
+                )
+                if (newTag) newTagIds.push(newTag.id)
+              }
+            }
+            draftEntry.value.tagIds = newTagIds
+          }
         }
       }
     )

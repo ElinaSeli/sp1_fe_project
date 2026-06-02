@@ -119,11 +119,36 @@ watch(
 watch(
   () => form.projectId,
   (newVal, oldVal) => {
-    // Only clear dependent fields if the project is actually changing from one value to another
+    // Only swap dependent fields if the project is actually changing from one value to another
     // (ignores the initial set when the dialog opens, where oldVal is usually undefined or matches the entry)
     if (oldVal !== undefined && newVal !== oldVal) {
-      form.issueId = undefined
-      form.tagIds = []
+      // Swap Issue ID
+      if (form.issueId) {
+        const oldIssue = (issuesStore.issues || []).find((i) => i.id === form.issueId)
+        if (oldIssue) {
+          const newIssue = (issuesStore.issues || []).find(
+            (i) => i.name === oldIssue.name && i.projectId === newVal
+          )
+          form.issueId = newIssue ? newIssue.id : undefined
+        } else {
+          form.issueId = undefined
+        }
+      }
+
+      // Swap Tag IDs
+      if (form.tagIds && form.tagIds.length > 0) {
+        const newTagIds: string[] = []
+        for (const oldId of form.tagIds) {
+          const oldTag = (tagsStore.tags || []).find((t) => t.id === oldId)
+          if (oldTag) {
+            const newTag = (tagsStore.tags || []).find(
+              (t) => t.name === oldTag.name && t.projectId === newVal
+            )
+            if (newTag) newTagIds.push(newTag.id)
+          }
+        }
+        form.tagIds = newTagIds
+      }
     }
   }
 )
@@ -254,7 +279,6 @@ async function onDelete() {
                 value-key="id"
                 label-key="name"
                 placeholder="Select issue"
-                :disabled="!form.projectId"
                 class="w-full"
               />
             </UFormField>
@@ -269,7 +293,6 @@ async function onDelete() {
               placeholder="Select tags"
               multiple
               class="w-full"
-              :disabled="!form.projectId"
             />
           </UFormField>
 

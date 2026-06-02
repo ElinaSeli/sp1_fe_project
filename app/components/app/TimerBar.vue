@@ -25,28 +25,19 @@ const activeProjectName = computed({
   }
 })
 
-// --- Disambiguation Helper ---
-const formatItemName = (name: string, pId: string | null) => {
-  if (timerStore.draftEntry.projectId) return name
-  const pName = projects.value.find((p) => p.id === pId)?.name || 'Global'
-  return `${name} (${pName})`
-}
-
 const issues = computed(() => {
   const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
   let filtered = all
   if (timerStore.draftEntry.projectId) {
     filtered = all.filter((i) => i.projectId === timerStore.draftEntry.projectId)
-    return Array.from(new Set(filtered.map((i) => i.name)))
   }
-  return Array.from(new Set(all.map((i) => formatItemName(i.name, i.projectId))))
+  return Array.from(new Set(filtered.map((i) => i.name)))
 })
 
 const activeIssueName = computed({
   get: () => {
     const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
-    const i = all.find((i) => i.id === timerStore.draftEntry.issueId)
-    return i ? formatItemName(i.name, i.projectId) : ''
+    return all.find((i) => i.id === timerStore.draftEntry.issueId)?.name || ''
   },
   set: (name: string) => {
     const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
@@ -56,9 +47,9 @@ const activeIssueName = computed({
     if (timerStore.draftEntry.projectId) {
       i = all.find((x) => x.name === name && x.projectId === timerStore.draftEntry.projectId)
     }
-    // Fallback to formatted name match
+    // Fallback to any issue with that name
     if (!i) {
-      i = all.find((x) => formatItemName(x.name, x.projectId) === name)
+      i = all.find((x) => x.name === name)
     }
 
     timerStore.draftEntry.issueId = i ? i.id : null
@@ -78,35 +69,44 @@ const availableTags = computed(() => {
   let filtered = allTags.value
   if (timerStore.draftEntry.projectId) {
     filtered = allTags.value.filter((t) => t.projectId === timerStore.draftEntry.projectId)
-    return Array.from(new Set(filtered.map((t) => t.name)))
   }
-  return Array.from(new Set(allTags.value.map((t) => formatItemName(t.name, t.projectId))))
+  return Array.from(new Set(filtered.map((t) => t.name)))
 })
+
 const selectedTagNames = computed({
   get: () => {
     const currentIds = timerStore.draftEntry.tagIds || []
     return currentIds
-      .map((id) => {
-        const t = allTags.value.find((t) => t.id === id)
-        return t ? formatItemName(t.name, t.projectId) : null
-      })
+      .map((id) => allTags.value.find((t) => t.id === id)?.name)
       .filter(Boolean) as string[]
   },
   set: (names: string[]) => {
-    timerStore.draftEntry.tagIds = names
-      .map((n) => {
-        let t = null
-        if (timerStore.draftEntry.projectId) {
-          t = allTags.value.find(
-            (x) => x.name === n && x.projectId === timerStore.draftEntry.projectId
-          )
+    const newIds: string[] = []
+    let autoProject: string | null = null
+
+    for (const n of names) {
+      let t = null
+      if (timerStore.draftEntry.projectId) {
+        t = allTags.value.find(
+          (x) => x.name === n && x.projectId === timerStore.draftEntry.projectId
+        )
+      }
+      if (!t) {
+        t = allTags.value.find((x) => x.name === n)
+      }
+      if (t?.id) {
+        newIds.push(t.id)
+        if (!autoProject && t.projectId) {
+          autoProject = t.projectId
         }
-        if (!t) {
-          t = allTags.value.find((x) => formatItemName(x.name, x.projectId) === n)
-        }
-        return t?.id
-      })
-      .filter(Boolean) as string[]
+      }
+    }
+
+    timerStore.draftEntry.tagIds = newIds
+
+    if (autoProject && !timerStore.draftEntry.projectId) {
+      timerStore.draftEntry.projectId = autoProject
+    }
   }
 })
 
