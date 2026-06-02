@@ -144,20 +144,20 @@ watch(activeWorkspaceId, (id) => {
           <span
             class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
             :class="
-              row.original.isImported
+              row.original.isExternal
                 ? 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300'
                 : 'bg-primary-50 dark:bg-primary-950 text-primary-700 dark:text-primary-300'
             "
           >
             <UIcon
-              :name="row.original.isImported ? 'i-lucide-plug' : 'i-lucide-circle-dot'"
+              :name="row.original.isExternal ? 'i-lucide-plug' : 'i-lucide-circle-dot'"
               class="text-[10px]"
             />
-            {{ row.original.isImported ? 'Integration' : 'Local' }}
+            {{ row.original.isExternal ? 'Integration' : 'Local' }}
           </span>
         </template>
         <template #actions-cell="{ row }">
-          <div v-if="!row.original.isImported" class="flex items-center justify-end gap-1">
+          <div v-if="!row.original.isExternal" class="flex items-center justify-end gap-1">
             <UButton
               icon="i-lucide-pencil"
               size="xs"

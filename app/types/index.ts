@@ -72,7 +72,7 @@ export interface Project {
   workspaceId: string
   name: string
   color?: string | null
-  isImported: boolean
+  isExternal: boolean
   externalId?: string | null
 }
 
@@ -96,7 +96,7 @@ export interface Issue {
   workspaceId: string
   projectId: string
   name: string
-  isImported: boolean
+
   externalId?: string | null
 }
 
@@ -111,7 +111,7 @@ export interface Tag {
   projectId: string
   name: string
   color?: string | null
-  isImported: boolean
+
   externalId?: string | null
 }
 
