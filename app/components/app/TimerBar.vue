@@ -27,8 +27,11 @@ const activeProjectName = computed({
 
 const issues = computed(() => {
   const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
-  if (!timerStore.draftEntry.projectId) return all.map((i) => i.name)
-  return all.filter((i) => i.projectId === timerStore.draftEntry.projectId).map((i) => i.name)
+  let filtered = all
+  if (timerStore.draftEntry.projectId) {
+    filtered = all.filter((i) => i.projectId === timerStore.draftEntry.projectId)
+  }
+  return Array.from(new Set(filtered.map((i) => i.name)))
 })
 const activeIssueName = computed({
   get: () => {
@@ -37,13 +40,37 @@ const activeIssueName = computed({
   },
   set: (name: string) => {
     const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
-    const i = all.find((x) => x.name === name)
+
+    // First try to find the issue in the currently selected project
+    let i = null
+    if (timerStore.draftEntry.projectId) {
+      i = all.find((x) => x.name === name && x.projectId === timerStore.draftEntry.projectId)
+    }
+    // Fallback to any issue with that name
+    if (!i) {
+      i = all.find((x) => x.name === name)
+    }
+
     timerStore.draftEntry.issueId = i ? i.id : null
+
+    // Auto-select the project if an issue is picked and the project doesn't match
+    if (
+      i &&
+      (!timerStore.draftEntry.projectId || timerStore.draftEntry.projectId !== i.projectId)
+    ) {
+      timerStore.draftEntry.projectId = i.projectId
+    }
   }
 })
 
 const allTags = computed(() => (Array.isArray(tagsStore.tags) ? tagsStore.tags : []))
-const availableTags = computed(() => allTags.value.map((t) => t.name))
+const availableTags = computed(() => {
+  let filtered = allTags.value
+  if (timerStore.draftEntry.projectId) {
+    filtered = allTags.value.filter((t) => t.projectId === timerStore.draftEntry.projectId)
+  }
+  return Array.from(new Set(filtered.map((t) => t.name)))
+})
 const selectedTagNames = computed({
   get: () => {
     const currentIds = timerStore.draftEntry.tagIds || []
@@ -53,7 +80,18 @@ const selectedTagNames = computed({
   },
   set: (names: string[]) => {
     timerStore.draftEntry.tagIds = names
-      .map((n) => allTags.value.find((t) => t.name === n)?.id)
+      .map((n) => {
+        let t = null
+        if (timerStore.draftEntry.projectId) {
+          t = allTags.value.find(
+            (x) => x.name === n && x.projectId === timerStore.draftEntry.projectId
+          )
+        }
+        if (!t) {
+          t = allTags.value.find((x) => x.name === n)
+        }
+        return t?.id
+      })
       .filter(Boolean) as string[]
   }
 })

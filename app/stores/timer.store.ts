@@ -135,7 +135,32 @@ export const useTimerStore = defineStore(
       try {
         const response = await timerService.stop(workspacesStore.activeWorkspaceId)
         if (response.data) {
-          const entry = response.data
+          let entry = response.data
+
+          // Workaround: Backend doesn't support setting tags on start/stop.
+          // So we update the completed time entry immediately with the drafted tags.
+          if (draftEntry.value.tagIds && draftEntry.value.tagIds.length > 0) {
+            try {
+              const updateRes = await timeEntriesService.update(
+                workspacesStore.activeWorkspaceId,
+                entry.id,
+                {
+                  projectId: entry.projectId,
+                  issueId: entry.issueId,
+                  description: entry.description,
+                  timeStart: entry.timeStart,
+                  timeEnd: entry.timeEnd as string,
+                  tagIds: draftEntry.value.tagIds
+                }
+              )
+              if (updateRes.data) {
+                entry = updateRes.data
+              }
+            } catch (err) {
+              console.error('Failed to save tags for tracked time entry:', err)
+            }
+          }
+
           entries.value.unshift({
             id: entry.id,
             description: entry.description || '',

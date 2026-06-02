@@ -195,10 +195,11 @@ watch(activeWorkspaceId, (id) => {
                 Cancel
               </UButton>
               <UButton
-                type="submit"
+                type="button"
                 color="primary"
                 :loading="isLoading"
                 :disabled="!state.name.trim() || !state.projectId"
+                @click="onSubmit"
               >
                 Create Tag
               </UButton>

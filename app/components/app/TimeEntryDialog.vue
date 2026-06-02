@@ -25,12 +25,39 @@ const isEdit = computed(() => Boolean(props.entry))
 const isLoading = ref(false)
 
 const projects = computed(() => projectsStore.projects)
-const tags = computed(() => tagsStore.tags)
-const filteredIssues = computed(() =>
-  form.projectId
-    ? issuesStore.issues.filter((i) => i.projectId === form.projectId)
-    : issuesStore.issues
-)
+const filteredTags = computed(() => {
+  const all = tagsStore.tags || []
+  let filtered = all
+  if (form.projectId) {
+    filtered = all.filter((t) => t.projectId === form.projectId)
+  }
+  const uniqueNames = new Set<string>()
+  const result: typeof all = []
+  for (const tag of filtered) {
+    if (!uniqueNames.has(tag.name)) {
+      uniqueNames.add(tag.name)
+      result.push(tag)
+    }
+  }
+  return result
+})
+
+const filteredIssues = computed(() => {
+  const all = issuesStore.issues || []
+  let filtered = all
+  if (form.projectId) {
+    filtered = all.filter((i) => i.projectId === form.projectId)
+  }
+  const uniqueNames = new Set<string>()
+  const result: typeof all = []
+  for (const issue of filtered) {
+    if (!uniqueNames.has(issue.name)) {
+      uniqueNames.add(issue.name)
+      result.push(issue)
+    }
+  }
+  return result
+})
 
 function toLocalInput(iso: string): string {
   const d = new Date(iso)
@@ -60,7 +87,13 @@ const form = reactive({
 watch(
   () => props.open,
   (open) => {
-    if (!open) return
+    if (!open) {
+      form.projectId = undefined
+      form.issueId = undefined
+      form.tagIds = []
+      form.description = ''
+      return
+    }
     if (props.entry) {
       form.description = props.entry.description ?? ''
       form.projectId = props.entry.projectId ?? undefined
@@ -79,6 +112,18 @@ watch(
       form.timeEnd = props.initialTimeEnd
         ? toLocalInput(props.initialTimeEnd.toISOString())
         : defaultEnd()
+    }
+  }
+)
+
+watch(
+  () => form.projectId,
+  (newVal, oldVal) => {
+    // Only clear dependent fields if the project is actually changing from one value to another
+    // (ignores the initial set when the dialog opens, where oldVal is usually undefined or matches the entry)
+    if (oldVal !== undefined && newVal !== oldVal) {
+      form.issueId = undefined
+      form.tagIds = []
     }
   }
 )
@@ -199,7 +244,6 @@ async function onDelete() {
                 label-key="name"
                 placeholder="Select project"
                 class="w-full"
-                @update:model-value="form.issueId = undefined"
               />
             </UFormField>
 
@@ -219,7 +263,7 @@ async function onDelete() {
           <UFormField label="Tags" name="tagIds">
             <USelectMenu
               v-model="form.tagIds"
-              :items="tags"
+              :items="filteredTags"
               value-key="id"
               label-key="name"
               placeholder="Select tags"
@@ -271,7 +315,13 @@ async function onDelete() {
             >
               Cancel
             </UButton>
-            <UButton type="submit" color="primary" :loading="isLoading" :disabled="!canSubmit">
+            <UButton
+              type="button"
+              color="primary"
+              :loading="isLoading"
+              :disabled="!canSubmit"
+              @click="onSubmit"
+            >
               {{ isEdit ? 'Save Changes' : 'Create Entry' }}
             </UButton>
           </div>
