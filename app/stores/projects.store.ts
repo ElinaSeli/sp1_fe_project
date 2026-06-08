@@ -15,11 +15,20 @@ export const useProjectsStore = defineStore('projects', () => {
   const projects = ref<Project[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  /**
+   * Set when GET /projects returns 504 (Redmine unreachable).
+   * The backend still returns cached data in that case, so we surface this
+   * as a non-blocking warning rather than a hard error.
+   */
+  const redmineWarning = ref<string | null>(null)
 
   // --- Actions ---
 
   /**
    * Fetch all projects for the currently active workspace.
+   * Triggers a pass-through Redmine sync on the backend.
+   * If Redmine is unreachable (HTTP 504), cached data is returned and
+   * redmineWarning is set so the UI can show an alert.
    */
   async function fetchProjects() {
     const wsId = workspacesStore.activeWorkspaceId
@@ -28,15 +37,28 @@ export const useProjectsStore = defineStore('projects', () => {
     isLoading.value = true
     error.value = null
     try {
-      const { data, error: err } = await projectsService.getAll(wsId)
-      if (err) {
-        error.value = err
+      const response = await projectsService.getAll(wsId)
+
+      if (response.statusCode === 504) {
+        // Redmine is unreachable — backend still returns cached data.
+        redmineWarning.value =
+          'Redmine is unreachable — showing cached projects. Some data may be outdated.'
+        if (response.data?.data) {
+          projects.value = response.data.data
+        }
         return
       }
-      if (data?.error) {
-        error.value = data.error
+
+      redmineWarning.value = null
+
+      if (response.error) {
+        error.value = response.error
+        return
       }
-      projects.value = data?.data ?? []
+      if (response.data?.error) {
+        error.value = response.data.error
+      }
+      projects.value = response.data?.data ?? []
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch projects'
     } finally {
@@ -100,6 +122,7 @@ export const useProjectsStore = defineStore('projects', () => {
     projects,
     isLoading,
     error,
+    redmineWarning,
     fetchProjects,
     createProject,
     updateProject,

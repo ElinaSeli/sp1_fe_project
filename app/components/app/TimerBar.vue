@@ -2,7 +2,6 @@
 const timerStore = useTimerStore()
 const workspacesStore = useWorkspacesStore()
 const projectsStore = useProjectsStore()
-const issuesStore = useIssuesStore()
 const tagsStore = useTagsStore()
 
 const description = computed({
@@ -25,20 +24,35 @@ const activeProjectName = computed({
   }
 })
 
-const issues = computed(() => {
-  const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
-  if (!timerStore.draftEntry.projectId) return all.map((i) => i.name)
-  return all.filter((i) => i.projectId === timerStore.draftEntry.projectId).map((i) => i.name)
-})
+// --- Live Issue Search (Redmine pass-through) ---
+const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
+const activeProjectExternalId = computed(
+  () =>
+    projectsStore.projects.find((p) => p.id === timerStore.draftEntry.projectId)?.externalId ?? null
+)
+const {
+  query: issueQuery,
+  results: issueResults,
+  isSearching: isSearchingIssues
+} = useIssueSearch(workspaceId, activeProjectExternalId)
+
+// Map search results to option labels for the combobox
+const issueOptions = computed(() => issueResults.value.map((r) => r.issue_title))
+
+// The currently selected issue label (for display in the combobox)
 const activeIssueName = computed({
-  get: () => {
-    const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
-    return all.find((i) => i.id === timerStore.draftEntry.issueId)?.name || ''
-  },
+  get: () => timerStore.draftEntry.issueTitle ?? '',
   set: (name: string) => {
-    const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
-    const i = all.find((x) => x.name === name)
-    timerStore.draftEntry.issueId = i ? i.id : null
+    if (!name) {
+      timerStore.draftEntry.externalIssueId = null
+      timerStore.draftEntry.issueTitle = ''
+      return
+    }
+    const match = issueResults.value.find((r) => r.issue_title === name)
+    if (match) {
+      timerStore.draftEntry.externalIssueId = String(match.external_id)
+      timerStore.draftEntry.issueTitle = match.issue_title
+    }
   }
 })
 
@@ -73,17 +87,11 @@ const onTimerBarFocusout = (e: FocusEvent) => {
   }
 }
 
-const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
-
 watch(
   workspaceId,
   async (id) => {
     if (id) {
-      await Promise.all([
-        projectsStore.fetchProjects(),
-        issuesStore.fetchIssues(),
-        tagsStore.fetchTags()
-      ])
+      await Promise.all([projectsStore.fetchProjects(), tagsStore.fetchTags()])
     }
   },
   { immediate: true }
@@ -191,10 +199,13 @@ onUnmounted(() => {
       <div class="flex w-full md:w-auto items-center gap-1">
         <AppComboboxInput
           v-model="activeIssueName"
-          :options="issues"
-          placeholder="Task"
+          :options="issueOptions"
+          :loading="isSearchingIssues"
+          placeholder="Search task…"
+          :allow-custom="false"
           :dark="true"
           class="flex-1 min-w-[130px] md:w-32 lg:w-40"
+          @query-change="(q) => (issueQuery = q)"
         />
 
         <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>

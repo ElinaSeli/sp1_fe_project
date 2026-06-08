@@ -16,8 +16,8 @@ const emit = defineEmits<{
 
 const timerStore = useTimerStore()
 const projectsStore = useProjectsStore()
-const issuesStore = useIssuesStore()
 const tagsStore = useTagsStore()
+const workspacesStore = useWorkspacesStore()
 const toast = useToast()
 const confirm = useConfirm()
 
@@ -25,12 +25,22 @@ const isEdit = computed(() => Boolean(props.entry))
 const isLoading = ref(false)
 
 const projects = computed(() => projectsStore.projects)
-const tags = computed(() => tagsStore.tags)
-const filteredIssues = computed(() =>
-  form.projectId
-    ? issuesStore.issues.filter((i) => i.projectId === form.projectId)
-    : issuesStore.issues
+const filteredTags = computed(() => {
+  const all = tagsStore.tags || []
+  return form.projectId ? all.filter((t) => t.projectId === form.projectId) : all
+})
+
+// Live Redmine issue search
+const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
+const activeProjectExternalId = computed(
+  () => projectsStore.projects.find((p) => p.id === form.projectId)?.externalId ?? null
 )
+const {
+  query: issueQuery,
+  results: issueResults,
+  isSearching: isSearchingIssues
+} = useIssueSearch(workspaceId, activeProjectExternalId)
+const issueOptions = computed(() => issueResults.value.map((r) => r.issue_title))
 
 function toLocalInput(iso: string): string {
   const d = new Date(iso)
@@ -52,6 +62,10 @@ const form = reactive({
   description: '',
   projectId: undefined as string | undefined,
   issueId: undefined as string | undefined,
+  /** Redmine issue ID from live search — mutually exclusive with issueId. */
+  externalIssueId: undefined as string | undefined,
+  /** Display label for the Redmine issue (not persisted). */
+  issueTitle: '' as string,
   tagIds: [] as string[],
   timeStart: defaultStart(),
   timeEnd: defaultEnd()
@@ -65,6 +79,8 @@ watch(
       form.description = props.entry.description ?? ''
       form.projectId = props.entry.projectId ?? undefined
       form.issueId = props.entry.issueId ?? undefined
+      form.externalIssueId = undefined
+      form.issueTitle = ''
       form.tagIds = [...(props.entry.tagIds ?? [])]
       form.timeStart = toLocalInput(props.entry.timeStart)
       form.timeEnd = props.entry.timeEnd ? toLocalInput(props.entry.timeEnd) : defaultEnd()
@@ -72,6 +88,8 @@ watch(
       form.description = ''
       form.projectId = undefined
       form.issueId = undefined
+      form.externalIssueId = undefined
+      form.issueTitle = ''
       form.tagIds = []
       form.timeStart = props.initialTimeStart
         ? toLocalInput(props.initialTimeStart.toISOString())
@@ -98,7 +116,8 @@ async function onSubmit() {
     if (isEdit.value && props.entry) {
       const payload: UpdateTimeEntryRequest = {
         projectId: form.projectId ?? null,
-        issueId: form.issueId ?? null,
+        issueId: form.externalIssueId ? null : (form.issueId ?? null),
+        externalIssueId: form.externalIssueId ?? null,
         description: form.description || null,
         timeStart: new Date(form.timeStart).toISOString(),
         timeEnd: new Date(form.timeEnd).toISOString(),
@@ -108,7 +127,8 @@ async function onSubmit() {
     } else {
       const payload: CreateTimeEntryRequest = {
         projectId: form.projectId ?? null,
-        issueId: form.issueId ?? null,
+        issueId: form.externalIssueId ? null : (form.issueId ?? null),
+        externalIssueId: form.externalIssueId ?? null,
         description: form.description || null,
         timeStart: new Date(form.timeStart).toISOString(),
         timeEnd: new Date(form.timeEnd).toISOString(),
@@ -204,14 +224,26 @@ async function onDelete() {
             </UFormField>
 
             <UFormField label="Issue" name="issueId">
-              <USelectMenu
-                v-model="form.issueId"
-                :items="filteredIssues"
-                value-key="id"
-                label-key="name"
-                placeholder="Select issue"
-                :disabled="!form.projectId"
+              <AppComboboxInput
+                v-model="form.issueTitle"
+                :options="issueOptions"
+                :loading="isSearchingIssues"
+                placeholder="Search issue…"
+                :allow-custom="false"
                 class="w-full"
+                @query-change="(q) => (issueQuery = q)"
+                @update:model-value="
+                  (title) => {
+                    const match = issueResults.find((r) => r.issue_title === title)
+                    if (match) {
+                      form.externalIssueId = String(match.external_id)
+                      form.issueTitle = match.issue_title
+                    } else {
+                      form.externalIssueId = undefined
+                      form.issueTitle = ''
+                    }
+                  }
+                "
               />
             </UFormField>
           </div>
@@ -219,7 +251,7 @@ async function onDelete() {
           <UFormField label="Tags" name="tagIds">
             <USelectMenu
               v-model="form.tagIds"
-              :items="tags"
+              :items="filteredTags"
               value-key="id"
               label-key="name"
               placeholder="Select tags"

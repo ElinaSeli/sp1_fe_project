@@ -44,6 +44,24 @@
         @blur="onBlur"
         @keydown="onKeydown"
       />
+      <!-- Loading spinner -->
+      <svg
+        v-if="loading"
+        class="combobox-spinner"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-dasharray="40 20"
+        />
+      </svg>
     </div>
 
     <!-- Dropdown -->
@@ -143,10 +161,15 @@ const props = defineProps({
   dark: {
     type: Boolean,
     default: false
+  },
+  /** Show a loading spinner (for async search) */
+  loading: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'confirm', 'submit'])
+const emit = defineEmits(['update:modelValue', 'confirm', 'submit', 'queryChange'])
 
 const wrapperRef = ref(null)
 const inputRef = ref(null)
@@ -215,6 +238,10 @@ watch(
   },
   { immediate: true }
 )
+
+watch(query, (q) => {
+  emit('queryChange', q)
+})
 
 // ─── Focus / blur ────────────────────────────────────────────────────────────
 
@@ -376,6 +403,21 @@ defineExpose({ focus: focusInput })
 
 <style scoped>
 /* ─── Field (the visible "input box") ──────────────────────────────────────── */
+
+/* ─── Async loading spinner ──────────────────────────────────────────────────── */
+.combobox-spinner {
+  width: 14px;
+  height: 14px;
+  color: #10b981;
+  flex-shrink: 0;
+  animation: cb-spin 0.8s linear infinite;
+}
+@keyframes cb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .combobox-field {
   display: flex;
   align-items: center;

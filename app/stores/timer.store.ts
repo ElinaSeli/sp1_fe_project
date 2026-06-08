@@ -21,6 +21,10 @@ export const useTimerStore = defineStore(
       description: '',
       projectId: null as string | null,
       issueId: null as string | null,
+      /** Redmine issue ID from live search — mutually exclusive with issueId. */
+      externalIssueId: null as string | null,
+      /** Display label for the selected Redmine issue (not saved to BE). */
+      issueTitle: '' as string,
       tagIds: [] as string[]
     })
 
@@ -111,7 +115,8 @@ export const useTimerStore = defineStore(
         const response = await timerService.start(workspacesStore.activeWorkspaceId, {
           description: draftEntry.value.description || null,
           projectId: draftEntry.value.projectId,
-          issueId: draftEntry.value.issueId || null
+          issueId: draftEntry.value.externalIssueId ? null : draftEntry.value.issueId || null,
+          tagIds: draftEntry.value.tagIds.length > 0 ? draftEntry.value.tagIds : undefined
         })
 
         if (response.data) {
@@ -136,6 +141,17 @@ export const useTimerStore = defineStore(
         const response = await timerService.stop(workspacesStore.activeWorkspaceId)
         if (response.data) {
           const entry = response.data
+          if (draftEntry.value.tagIds && draftEntry.value.tagIds.length > 0) {
+            await timeEntriesService.update(workspacesStore.activeWorkspaceId, entry.id, {
+              projectId: entry.projectId,
+              issueId: draftEntry.value.externalIssueId ? null : entry.issueId,
+              externalIssueId: draftEntry.value.externalIssueId || null,
+              description: entry.description,
+              timeStart: entry.timeStart,
+              timeEnd: entry.timeEnd ?? new Date().toISOString(),
+              tagIds: draftEntry.value.tagIds
+            })
+          }
           entries.value.unshift({
             id: entry.id,
             description: entry.description || '',
@@ -260,6 +276,8 @@ export const useTimerStore = defineStore(
         description: '',
         projectId: null,
         issueId: null,
+        externalIssueId: null,
+        issueTitle: '',
         tagIds: []
       }
     }

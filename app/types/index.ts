@@ -151,7 +151,10 @@ export interface TimeEntry {
 
 export interface CreateTimeEntryRequest {
   projectId?: string | null
+  /** Local UUID issue — mutually exclusive with externalIssueId. */
   issueId?: string | null
+  /** Redmine issue ID from live search — mutually exclusive with issueId. */
+  externalIssueId?: string | null
   description?: string | null
   timeStart: string // ISO date-time
   timeEnd: string // ISO date-time
@@ -162,11 +165,16 @@ export interface StartTimerRequest {
   projectId?: string | null
   issueId?: string | null
   description?: string | null
+  /** Tags to associate with the entry at start time. */
+  tagIds?: string[]
 }
 
 export interface UpdateTimeEntryRequest {
   projectId?: string | null
+  /** Local UUID issue — mutually exclusive with externalIssueId. */
   issueId?: string | null
+  /** Redmine issue ID from live search — mutually exclusive with issueId. */
+  externalIssueId?: string | null
   description?: string | null
   timeStart: string
   timeEnd: string
@@ -236,12 +244,28 @@ export interface KeybindingBinding {
 }
 
 // ---------------------------------------------------------------------------
+// Issues — live search from Redmine (not stored locally)
+// ---------------------------------------------------------------------------
+
+/**
+ * Result from GET /api/workspaces/{id}/issues/search.
+ * Issues are never persisted locally — always searched live from Redmine.
+ */
+export interface IssueSearchResult {
+  external_id: number
+  issue_title: string
+  project_name: string
+}
+
+// ---------------------------------------------------------------------------
 // Generic service layer contract
 // ---------------------------------------------------------------------------
 
 export interface ServiceResponse<T> {
   data: T | null
   error: string | null
+  /** HTTP status code — populated on error responses for specific handling (e.g. 504). */
+  statusCode?: number | null
 }
 
 // ---------------------------------------------------------------------------
