@@ -58,6 +58,9 @@ export const useTimerStore = defineStore(
             id: e.id,
             description: e.description || '',
             projectId: e.projectId,
+            issueId: e.issueId ?? null,
+            issueTitle: '', // title not stored in DB; populated only on local create/stop
+            tagIds: e.tagIds ?? [],
             duration: e.timeEnd
               ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
               : 0,
@@ -116,6 +119,7 @@ export const useTimerStore = defineStore(
           description: draftEntry.value.description || null,
           projectId: draftEntry.value.projectId,
           issueId: draftEntry.value.externalIssueId ? null : draftEntry.value.issueId || null,
+          externalIssueId: draftEntry.value.externalIssueId || null,
           tagIds: draftEntry.value.tagIds.length > 0 ? draftEntry.value.tagIds : undefined
         })
 
@@ -141,21 +145,36 @@ export const useTimerStore = defineStore(
         const response = await timerService.stop(workspacesStore.activeWorkspaceId)
         if (response.data) {
           const entry = response.data
-          if (draftEntry.value.tagIds && draftEntry.value.tagIds.length > 0) {
+
+          // Backend workaround: timer/stop does not persist tagIds or externalIssueId.
+          // Send a follow-up PUT whenever we have tags OR a Redmine issue to save.
+          const hasTags = draftEntry.value.tagIds && draftEntry.value.tagIds.length > 0
+          const hasExternalIssue = !!draftEntry.value.externalIssueId
+          if (hasTags || hasExternalIssue) {
             await timeEntriesService.update(workspacesStore.activeWorkspaceId, entry.id, {
               projectId: entry.projectId,
-              issueId: draftEntry.value.externalIssueId ? null : entry.issueId,
+              issueId: hasExternalIssue ? null : entry.issueId,
               externalIssueId: draftEntry.value.externalIssueId || null,
               description: entry.description,
               timeStart: entry.timeStart,
               timeEnd: entry.timeEnd ?? new Date().toISOString(),
               tagIds: draftEntry.value.tagIds
             })
+            // Patch the local entry object so the list reflects the saved state
+            if (hasTags) entry.tagIds = [...draftEntry.value.tagIds]
           }
+
+          // Capture draft values before resetDraft() clears them
+          const savedIssueTitle = draftEntry.value.issueTitle
+          const savedTagIds = [...draftEntry.value.tagIds]
+
           entries.value.unshift({
             id: entry.id,
             description: entry.description || '',
             projectId: entry.projectId,
+            issueId: entry.issueId ?? null,
+            issueTitle: savedIssueTitle,
+            tagIds: entry.tagIds ?? savedTagIds,
             duration: entry.timeEnd
               ? Math.floor(
                   (new Date(entry.timeEnd).getTime() - new Date(entry.timeStart).getTime()) / 1000
@@ -190,6 +209,9 @@ export const useTimerStore = defineStore(
         id: e.id,
         description: e.description || '',
         projectId: e.projectId,
+        issueId: e.issueId ?? null,
+        issueTitle: '', // caller (TimeEntryDialog) has the title but doesn't pass it back here
+        tagIds: e.tagIds ?? [],
         duration: e.timeEnd
           ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
           : 0,
@@ -222,6 +244,10 @@ export const useTimerStore = defineStore(
           id: e.id,
           description: e.description || '',
           projectId: e.projectId,
+          issueId: e.issueId ?? null,
+          // Preserve existing issueTitle if the backend doesn't store it
+          issueTitle: entries.value[vmIdx]?.issueTitle ?? '',
+          tagIds: e.tagIds ?? [],
           duration: e.timeEnd
             ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
             : 0,

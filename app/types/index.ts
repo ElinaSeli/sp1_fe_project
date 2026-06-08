@@ -164,6 +164,8 @@ export interface CreateTimeEntryRequest {
 export interface StartTimerRequest {
   projectId?: string | null
   issueId?: string | null
+  /** Redmine issue ID — mutually exclusive with issueId. */
+  externalIssueId?: string | null
   description?: string | null
   /** Tags to associate with the entry at start time. */
   tagIds?: string[]
@@ -276,6 +278,16 @@ export interface TimeEntryViewModel {
   id: string
   description: string
   projectId: string | null
+  /** Preserved from raw TimeEntry so the edit dialog and resume flow can read it. */
+  issueId: string | null
+  /**
+   * Display label for the issue. Populated locally when we know it (e.g. after
+   * stopping a timer or creating an entry). Empty after page refresh — issue
+   * titles are not stored in the DB, they come from live Redmine search.
+   */
+  issueTitle: string
+  /** Preserved from raw TimeEntry so tags are visible in the list and edit dialog. */
+  tagIds: string[]
   duration: number
   timeStart: string
   timeEnd: string | null
