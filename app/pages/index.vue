@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import type { TimeEntryViewModel, TimeEntry } from '~/types'
+import type { TimeEntryViewModel, TimeEntry, Project } from '~/types'
 
 definePageMeta({
   layout: 'dashboard'
@@ -9,15 +9,33 @@ definePageMeta({
 
 const timerStore = useTimerStore()
 const workspacesStore = useWorkspacesStore()
+const projectsStore = useProjectsStore()
+const issuesStore = useIssuesStore()
+const tagsStore = useTagsStore()
 const { activeWorkspaceId } = storeToRefs(workspacesStore)
+const { projects } = storeToRefs(projectsStore)
 
-// Fetch entries for the calendar. We'll use our temporary hack.
-onMounted(() => {
-  if (activeWorkspaceId.value) timerStore.fetchEntries({ size: 100 })
+// Fetch entries and projects/issues/tags for the calendar. We'll use our temporary hack.
+onMounted(async () => {
+  if (activeWorkspaceId.value) {
+    await Promise.all([
+      timerStore.fetchEntries({ size: 100 }),
+      projectsStore.fetchProjects(),
+      issuesStore.fetchIssues(),
+      tagsStore.fetchTags()
+    ])
+  }
 })
 
-watch(activeWorkspaceId, (id) => {
-  if (id) timerStore.fetchEntries({ size: 100 })
+watch(activeWorkspaceId, async (id) => {
+  if (id) {
+    await Promise.all([
+      timerStore.fetchEntries({ size: 100 }),
+      projectsStore.fetchProjects(),
+      issuesStore.fetchIssues(),
+      tagsStore.fetchTags()
+    ])
+  }
 })
 
 // --- Dialog State ---
@@ -242,6 +260,25 @@ function sumDurationForDate(dateStr: string) {
   return entries.reduce((acc, e) => acc + getDurationForDate(e, dateStr), 0)
 }
 
+// Get project color for a time entry
+function getProjectColor(projectId: string | null): string | null {
+  if (!projectId) return null
+  const project = projects.value.find(
+    (p: Project) => p.id.toLowerCase() === projectId.toLowerCase()
+  )
+  return project?.color || null
+}
+
+// Get entry background style with project color
+function getEntryBackgroundStyle(entry: TimeEntryViewModel) {
+  const color = getProjectColor(entry.projectId)
+  if (!color) return {}
+
+  return {
+    '--project-color': color
+  }
+}
+
 // Helper to position entries in the hourly grid
 function getEntryStyle(
   entry: TimeEntryViewModel,
@@ -461,7 +498,13 @@ function getEntryStyle(
             <div
               v-for="entry in (entriesByDate.get(formatDateStr(day)) || []).slice(0, 1)"
               :key="entry.id"
-              class="text-[10px] leading-tight px-1 py-0.5 rounded bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-100 dark:border-primary-800/40 hover:border-primary-300 dark:hover:border-primary-700 transition-colors flex justify-between gap-1 shadow-sm cursor-pointer pointer-events-auto"
+              class="text-[10px] leading-tight px-1 py-0.5 rounded border transition-colors flex justify-between gap-1 shadow-sm cursor-pointer pointer-events-auto"
+              :class="
+                getProjectColor(entry.projectId)
+                  ? 'project-colored-entry'
+                  : 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-primary-100 dark:border-primary-800/40 hover:border-primary-300 dark:hover:border-primary-700'
+              "
+              :style="getEntryBackgroundStyle(entry)"
               @click.stop="openEdit(entry)"
             >
               <span class="font-medium truncate">{{ entry.description || 'No description' }}</span>
@@ -534,17 +577,31 @@ function getEntryStyle(
                 <div
                   v-for="entry in entriesByDate.get(formatDateStr(day))"
                   :key="entry.id"
-                  class="absolute rounded bg-primary-100 dark:bg-primary-900/70 border border-primary-300 dark:border-primary-700 p-1 cursor-pointer hover:shadow-md hover:z-10 transition-shadow overflow-hidden shadow-sm flex flex-col"
-                  :style="getEntryStyle(entry, entriesByDate.get(formatDateStr(day)) || [], day)"
+                  class="absolute rounded border p-1 cursor-pointer hover:shadow-md hover:z-10 transition-shadow overflow-hidden shadow-sm flex flex-col"
+                  :class="
+                    getProjectColor(entry.projectId)
+                      ? 'project-colored-entry'
+                      : 'bg-primary-100 dark:bg-primary-900/70 border-primary-300 dark:border-primary-700'
+                  "
+                  :style="{
+                    ...getEntryStyle(entry, entriesByDate.get(formatDateStr(day)) || [], day),
+                    ...getEntryBackgroundStyle(entry)
+                  }"
                   @click.stop="openEdit(entry)"
                 >
                   <div
-                    class="text-[10px] font-bold text-primary-800 dark:text-primary-200 leading-none mb-0.5"
+                    class="text-[10px] font-bold leading-none mb-0.5"
+                    :class="
+                      getProjectColor(entry.projectId)
+                        ? ''
+                        : 'text-primary-800 dark:text-primary-200'
+                    "
                   >
                     {{ formatDuration(getDurationForDate(entry, formatDateStr(day))) }}
                   </div>
                   <div
-                    class="text-[11px] leading-tight text-gray-900 dark:text-white font-medium truncate"
+                    class="text-[11px] leading-tight font-medium truncate"
+                    :class="getProjectColor(entry.projectId) ? '' : 'text-gray-900 dark:text-white'"
                   >
                     {{ entry.description || '(No description)' }}
                   </div>
