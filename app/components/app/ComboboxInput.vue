@@ -64,67 +64,73 @@
       </svg>
     </div>
 
-    <!-- Dropdown -->
-    <Transition name="cb-drop">
-      <div
-        v-if="isOpen && visibleOptions.length > 0"
-        class="combobox-dropdown"
-        :class="dark ? 'combobox-dropdown--dark' : 'combobox-dropdown--light'"
-      >
-        <!-- "Recent" section label shown only when not typing -->
-        <div v-if="showRecentLabel" class="combobox-section-label">
-          <svg
-            width="11"
-            height="11"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="inline mr-1 opacity-60"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          Recent
-        </div>
-
-        <!-- Options -->
+    <!-- Dropdown - Teleported to body to avoid clipping by modals -->
+    <Teleport to="body">
+      <Transition name="cb-drop">
         <div
-          v-for="(option, idx) in visibleOptions"
-          :key="option"
-          class="combobox-option"
-          :class="{
-            'combobox-option--active': idx === activeIdx,
-            'combobox-option--selected': isSelected(option),
-            'combobox-option--recent': isRecentItem(option) && !query.trim(),
-            'combobox-option--dark': dark,
-            'combobox-option--light': !dark
-          }"
-          @mousedown.prevent="choose(option)"
+          v-if="isOpen && visibleOptions.length > 0"
+          class="combobox-dropdown"
+          :class="[
+            dark ? 'combobox-dropdown--dark' : 'combobox-dropdown--light',
+            'combobox-dropdown--teleported'
+          ]"
+          :style="dropdownStyle"
         >
-          <span class="flex-1 truncate">{{ option }}</span>
-          <span v-if="isRecentItem(option) && !query.trim()" class="combobox-recent-badge"
-            >recent</span
+          <!-- "Recent" section label shown only when not typing -->
+          <div v-if="showRecentLabel" class="combobox-section-label">
+            <svg
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="inline mr-1 opacity-60"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            Recent
+          </div>
+
+          <!-- Options -->
+          <div
+            v-for="(option, idx) in visibleOptions"
+            :key="option"
+            class="combobox-option"
+            :class="{
+              'combobox-option--active': idx === activeIdx,
+              'combobox-option--selected': isSelected(option),
+              'combobox-option--recent': isRecentItem(option) && !query.trim(),
+              'combobox-option--dark': dark,
+              'combobox-option--light': !dark
+            }"
+            @mousedown.prevent="choose(option)"
           >
-          <svg
-            v-if="isSelected(option)"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="3"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="ml-2 text-primary-500 shrink-0"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+            <span class="flex-1 truncate">{{ option }}</span>
+            <span v-if="isRecentItem(option) && !query.trim()" class="combobox-recent-badge"
+              >recent</span
+            >
+            <svg
+              v-if="isSelected(option)"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="ml-2 text-primary-500 shrink-0"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -176,6 +182,30 @@ const inputRef = ref(null)
 const isOpen = ref(false)
 const query = ref('')
 const activeIdx = ref(-1)
+
+// ─── Dropdown positioning (teleported to body) ─────────────────────────────────
+
+const dropdownStyle = computed(() => {
+  if (!isOpen.value || !wrapperRef.value) {
+    return { display: 'none' }
+  }
+
+  try {
+    const rect = wrapperRef.value.getBoundingClientRect()
+    const maxWidth = Math.min(window.innerWidth - 20, 500)
+    return {
+      position: 'fixed',
+      top: `${rect.bottom + 6}px`,
+      left: `${Math.max(10, Math.min(rect.left, window.innerWidth - maxWidth - 10))}px`,
+      minWidth: '200px',
+      maxWidth: `${maxWidth}px`,
+      zIndex: 99999
+    }
+  } catch {
+    // Fallback if getBoundingClientRect fails
+    return { display: 'none' }
+  }
+})
 
 // ─── Selection helpers ───────────────────────────────────────────────────────
 
@@ -255,9 +285,8 @@ const onFocus = () => {
 const onBlur = () => {
   // Small delay so mousedown on dropdown option can fire first
   setTimeout(() => {
-    if (!wrapperRef.value?.contains(document.activeElement)) {
-      closeDropdown()
-    }
+    // Always close on blur - the contains() check doesn't work with teleported elements
+    closeDropdown()
   }, 150)
 }
 
@@ -522,9 +551,7 @@ defineExpose({ focus: focusInput })
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  min-width: 200px;
   width: max-content;
-  max-width: min(90vw, 500px);
   max-height: 260px;
   overflow-y: auto;
   border-radius: 10px;
@@ -532,6 +559,12 @@ defineExpose({ focus: focusInput })
   padding: 4px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
+
+/* When teleported to body, use fixed positioning and inline styles override absolute */
+.combobox-dropdown--teleported {
+  position: fixed;
+}
+
 .combobox-dropdown--light {
   background: #ffffff;
   border: 1px solid #e2e8f0;

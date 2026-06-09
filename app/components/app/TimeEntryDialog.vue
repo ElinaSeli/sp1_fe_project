@@ -115,6 +115,7 @@ watch(
       form.issueId = undefined
       form.tagIds = []
       form.description = ''
+      issueQuery.value = ''
       isInitializing.value = false
       return
     }
@@ -128,6 +129,7 @@ watch(
       form.tagIds = [...(entry.tagIds ?? [])]
       form.timeStart = toLocalInput(entry.timeStart)
       form.timeEnd = entry.timeEnd ? toLocalInput(entry.timeEnd) : defaultEnd()
+      issueQuery.value = ''
 
       if (entry.issueId) {
         const localIssue = (issuesStore.issues || []).find((i) => i.id === entry.issueId)
@@ -161,22 +163,24 @@ watch(
         ? toLocalInput(props.initialTimeEnd.toISOString())
         : defaultEnd()
       selectedIssueProjectName.value = ''
+      issueQuery.value = ''
     }
+    isInitializing.value = false
   }
 )
 
-watch(
-  [() => form.projectId, projects],
-  ([projId, projs]) => {
-    if (projId && projs.length > 0 && !selectedIssueProjectName.value) {
-      const proj = projs.find((p) => p.id === projId)
-      if (proj) {
-        selectedIssueProjectName.value = proj.name
-      }
+watch([() => form.projectId, projects], ([projId, projs]) => {
+  // DO NOT clear issue when project changes - allow mismatched selection
+  // Only validate and clear on save, not immediately
+
+  // Update selectedIssueProjectName when project changes ONLY if no issue is selected
+  if (projId && projs.length > 0 && !form.externalIssueId && !form.issueId) {
+    const proj = projs.find((p) => p.id === projId)
+    if (proj) {
+      selectedIssueProjectName.value = proj.name
     }
-  },
-  { immediate: true }
-)
+  }
+})
 
 function onIssueSelected(title: string) {
   const match = issueResults.value.find((r) => r.issue_title === title)
@@ -188,6 +192,14 @@ function onIssueSelected(title: string) {
     form.externalIssueId = undefined
     form.issueTitle = ''
     selectedIssueProjectName.value = ''
+  }
+}
+
+function _onIssueFocus() {
+  // Ensure form.issueTitle is empty when focusing to enter search mode
+  // This allows live search to work properly
+  if (!issueQuery.value) {
+    form.issueTitle = ''
   }
 }
 
@@ -269,7 +281,11 @@ async function onSubmit() {
     }
 
     emit('saved', saved)
-    emit('update:open', false)
+
+    // Only close dialog if there was no mismatch
+    if (!mismatch) {
+      emit('update:open', false)
+    }
   } finally {
     isLoading.value = false
   }
@@ -344,7 +360,7 @@ async function onDelete() {
               v-model="form.issueTitle"
               :options="issueOptions"
               :loading="isSearchingIssues"
-              placeholder="Search issue…"
+              :placeholder="form.projectId ? 'Search issue…' : 'Select a project first'"
               :allow-custom="false"
               class="w-full"
               @query-change="(q) => (issueQuery = q)"

@@ -257,6 +257,7 @@ export interface IssueSearchResult {
   external_id: number
   issue_title: string
   project_name: string
+  project_external_id: string
 }
 
 // ---------------------------------------------------------------------------
