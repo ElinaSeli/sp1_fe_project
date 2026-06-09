@@ -74,6 +74,26 @@ export const useWorkspacesStore = defineStore(
       }
     }
 
+    async function updateWorkspace(id: string, name: string): Promise<Workspace | null> {
+      isLoading.value = true
+      error.value = null
+      try {
+        const response = await workspacesService.update(id, { name })
+        if (response.error || !response.data) {
+          error.value = response.error ?? 'Failed to update workspace'
+          return null
+        }
+        const idx = workspaces.value.findIndex((w) => w.id === id)
+        if (idx !== -1) workspaces.value[idx] = response.data
+        return response.data
+      } catch (e: unknown) {
+        error.value = e instanceof Error ? e.message : 'Failed to update workspace'
+        return null
+      } finally {
+        isLoading.value = false
+      }
+    }
+
     async function deleteWorkspace(id: string): Promise<boolean> {
       isLoading.value = true
       error.value = null
@@ -106,6 +126,7 @@ export const useWorkspacesStore = defineStore(
       setActiveWorkspace,
       fetchWorkspaces,
       createWorkspace,
+      updateWorkspace,
       deleteWorkspace
     }
   },
