@@ -23,14 +23,64 @@ const confirm = useConfirm()
 
 const isEdit = computed(() => Boolean(props.entry))
 const isLoading = ref(false)
+const isInitializing = ref(false)
 
 const projects = computed(() => projectsStore.projects)
-const tags = computed(() => tagsStore.tags)
-const filteredIssues = computed(() =>
-  form.projectId
-    ? issuesStore.issues.filter((i) => i.projectId === form.projectId)
-    : issuesStore.issues
-)
+const filteredTags = computed(() => {
+  const all = tagsStore.tags || []
+  let filtered = all
+  if (form.projectId) {
+    filtered = all.filter((t) => t.projectId === form.projectId)
+  }
+  const uniqueNames = new Set<string>()
+  const result: typeof all = []
+
+  // Safeguard: Ensure currently selected tags are always present in the items array
+  if (form.tagIds && form.tagIds.length > 0) {
+    for (const id of form.tagIds) {
+      const selectedTag = all.find((t) => t.id === id)
+      if (selectedTag) {
+        result.push(selectedTag)
+        uniqueNames.add(selectedTag.name)
+      }
+    }
+  }
+
+  for (const tag of filtered) {
+    if (!uniqueNames.has(tag.name)) {
+      uniqueNames.add(tag.name)
+      result.push(tag)
+    }
+  }
+  return result
+})
+
+const filteredIssues = computed(() => {
+  const all = issuesStore.issues || []
+  let filtered = all
+  if (form.projectId) {
+    filtered = all.filter((i) => i.projectId === form.projectId)
+  }
+  const uniqueNames = new Set<string>()
+  const result: typeof all = []
+
+  // Safeguard: Ensure currently selected issue is always present in the items array
+  if (form.issueId) {
+    const selectedIssue = all.find((i) => i.id === form.issueId)
+    if (selectedIssue) {
+      result.push(selectedIssue)
+      uniqueNames.add(selectedIssue.name)
+    }
+  }
+
+  for (const issue of filtered) {
+    if (!uniqueNames.has(issue.name)) {
+      uniqueNames.add(issue.name)
+      result.push(issue)
+    }
+  }
+  return result
+})
 
 function toLocalInput(iso: string): string {
   const d = new Date(iso)
@@ -60,7 +110,15 @@ const form = reactive({
 watch(
   () => props.open,
   (open) => {
-    if (!open) return
+    isInitializing.value = true
+    if (!open) {
+      form.projectId = undefined
+      form.issueId = undefined
+      form.tagIds = []
+      form.description = ''
+      isInitializing.value = false
+      return
+    }
     if (props.entry) {
       form.description = props.entry.description ?? ''
       form.projectId = props.entry.projectId ?? undefined
@@ -80,6 +138,7 @@ watch(
         ? toLocalInput(props.initialTimeEnd.toISOString())
         : defaultEnd()
     }
+    isInitializing.value = false
   }
 )
 
@@ -89,6 +148,43 @@ const selectedTagId = computed({
     form.tagIds = val ? [val] : []
   }
 })
+
+watch(
+  () => form.projectId,
+  (newVal, oldVal) => {
+    // Only swap dependent fields if the project is actually changing from one value to another
+    if (!isInitializing.value && newVal !== oldVal) {
+      // Swap Issue ID
+      if (form.issueId) {
+        const oldIssue = (issuesStore.issues || []).find((i) => i.id === form.issueId)
+        if (oldIssue) {
+          const newIssue = (issuesStore.issues || []).find(
+            (i) => i.name === oldIssue.name && i.projectId === newVal
+          )
+          form.issueId = newIssue ? newIssue.id : undefined
+        } else {
+          form.issueId = undefined
+        }
+      }
+
+      // Swap Tag IDs
+      if (form.tagIds && form.tagIds.length > 0) {
+        const newTagIds: string[] = []
+        for (const oldId of form.tagIds) {
+          const oldTag = (tagsStore.tags || []).find((t) => t.id === oldId)
+          if (oldTag) {
+            const newTag = (tagsStore.tags || []).find(
+              (t) => t.name === oldTag.name && t.projectId === newVal
+            )
+            if (newTag) newTagIds.push(newTag.id)
+          }
+        }
+        form.tagIds = newTagIds
+      }
+    }
+  },
+  { flush: 'sync' }
+)
 
 const timeStartMs = computed(() => new Date(form.timeStart).getTime())
 const timeEndMs = computed(() => new Date(form.timeEnd).getTime())
@@ -206,7 +302,6 @@ async function onDelete() {
                 label-key="name"
                 placeholder="Select project"
                 class="w-full"
-                @update:model-value="form.issueId = undefined"
               />
             </UFormField>
 
@@ -217,7 +312,6 @@ async function onDelete() {
                 value-key="id"
                 label-key="name"
                 placeholder="Select issue"
-                :disabled="!form.projectId"
                 class="w-full"
               />
             </UFormField>
@@ -226,7 +320,7 @@ async function onDelete() {
           <UFormField label="Tag" name="tagIds">
             <USelectMenu
               v-model="selectedTagId"
-              :items="tags"
+              :items="filteredTags"
               value-key="id"
               label-key="name"
               placeholder="Select tag"
@@ -277,7 +371,13 @@ async function onDelete() {
             >
               Cancel
             </UButton>
-            <UButton type="submit" color="primary" :loading="isLoading" :disabled="!canSubmit">
+            <UButton
+              type="button"
+              color="primary"
+              :loading="isLoading"
+              :disabled="!canSubmit"
+              @click="onSubmit"
+            >
               {{ isEdit ? 'Save Changes' : 'Create Entry' }}
             </UButton>
           </div>

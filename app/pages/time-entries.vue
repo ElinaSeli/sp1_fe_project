@@ -30,7 +30,7 @@ function openEdit(id: string) {
 }
 
 function onSaved(_entry: TimeEntry) {
-  toast.add({ title: editingEntry.value ? 'Entry updated' : 'Entry created', color: 'success' })
+  // Toast is handled by the dialog component
 }
 
 async function deleteEntry(id: string) {
