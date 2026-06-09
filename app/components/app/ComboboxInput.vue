@@ -29,12 +29,33 @@
         </button>
       </span>
 
-      <!-- Text input -->
+      <!-- Marquee display layer (shown when value selected + field idle) -->
+      <div
+        v-if="!isOpen && !props.multiple && query"
+        ref="displayRef"
+        class="combobox-display"
+        @click="focusInput"
+      >
+        <span
+          ref="displayTextRef"
+          class="combobox-display-text"
+          :class="[
+            dark ? 'combobox-input--dark' : 'combobox-input--light',
+            { 'combobox-marquee': isOverflowing }
+          ]"
+          >{{ query }}</span
+        >
+      </div>
+
+      <!-- Text input (in DOM always for focus; visually hidden behind display layer when idle) -->
       <input
         ref="inputRef"
         v-model="query"
         class="combobox-input"
-        :class="dark ? 'combobox-input--dark' : 'combobox-input--light'"
+        :class="[
+          dark ? 'combobox-input--dark' : 'combobox-input--light',
+          !isOpen && !props.multiple && query ? 'combobox-input--offscreen' : ''
+        ]"
         :placeholder="inputPlaceholder"
         autocomplete="off"
         autocorrect="off"
@@ -179,9 +200,33 @@ const emit = defineEmits(['update:modelValue', 'confirm', 'submit', 'queryChange
 
 const wrapperRef = ref(null)
 const inputRef = ref(null)
+const displayRef = ref(null)
+const displayTextRef = ref(null)
 const isOpen = ref(false)
 const query = ref('')
 const activeIdx = ref(-1)
+const isOverflowing = ref(false)
+
+const checkOverflow = async () => {
+  await nextTick()
+  if (!displayRef.value || !displayTextRef.value) {
+    isOverflowing.value = false
+    return
+  }
+  const containerW = displayRef.value.clientWidth
+  const textW = displayTextRef.value.scrollWidth
+  if (textW > containerW) {
+    isOverflowing.value = true
+    displayTextRef.value.style.setProperty('--marquee-offset', `${containerW - textW}px`)
+  } else {
+    isOverflowing.value = false
+  }
+}
+
+watch([query, isOpen], () => {
+  if (!isOpen.value && query.value) checkOverflow()
+  else isOverflowing.value = false
+})
 
 // ─── Dropdown positioning (teleported to body) ─────────────────────────────────
 
@@ -199,7 +244,8 @@ const dropdownStyle = computed(() => {
       left: `${Math.max(10, Math.min(rect.left, window.innerWidth - maxWidth - 10))}px`,
       minWidth: '200px',
       maxWidth: `${maxWidth}px`,
-      zIndex: 99999
+      zIndex: 99999,
+      pointerEvents: 'auto'
     }
   } catch {
     // Fallback if getBoundingClientRect fails
@@ -491,6 +537,44 @@ defineExpose({ focus: focusInput })
   background: transparent;
   font-size: 0.875rem;
   line-height: 1.25rem;
+}
+
+.combobox-input--offscreen {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+
+/* ─── Marquee display layer ───────────────────────────────────────────────────── */
+.combobox-display {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  cursor: text;
+}
+
+.combobox-display-text {
+  display: block;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+@keyframes combobox-marquee {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  85%,
+  100% {
+    transform: translateX(var(--marquee-offset, 0px));
+  }
+}
+
+.combobox-marquee {
+  animation: combobox-marquee 4s ease-in-out infinite alternate;
 }
 .combobox-input--light {
   color: #1e293b;

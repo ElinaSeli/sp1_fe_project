@@ -66,9 +66,12 @@ const {
   workspaceId,
   computed(() => null)
 )
-const issueOptions = computed(() =>
-  issueResults.value.map((r) => `#${r.external_id} - ${r.issue_title}`)
-)
+const formatIssueLabel = (r: { external_id: number; issue_title: string }) =>
+  r.issue_title.includes(`#${r.external_id}`)
+    ? r.issue_title
+    : `#${r.external_id} - ${r.issue_title}`
+
+const issueOptions = computed(() => issueResults.value.map(formatIssueLabel))
 
 const issueCache = new Map<
   string,
@@ -80,8 +83,7 @@ watch(
   (newResults) => {
     if (newResults) {
       for (const r of newResults) {
-        const key = `#${r.external_id} - ${r.issue_title}`
-        issueCache.set(key, r)
+        issueCache.set(formatIssueLabel(r), r)
       }
     }
   },
@@ -221,7 +223,10 @@ watch(
       if (entry.issueId) {
         const localIssue = (issuesStore.issues || []).find((i) => i.id === entry.issueId)
         if (localIssue && localIssue.externalId) {
-          form.issueTitle = `#${localIssue.externalId} - ${localIssue.name}`
+          form.issueTitle = formatIssueLabel({
+            external_id: Number(localIssue.externalId),
+            issue_title: localIssue.name
+          })
           form.externalIssueId = localIssue.externalId
           const proj = projects.value.find((p) => p.id === localIssue.projectId)
           if (proj) {
@@ -276,18 +281,16 @@ function onIssueSelected(title: string) {
     const key = title.trim()
     match =
       issueCache.get(key) ||
-      issueResults.value.find(
-        (r) => `#${r.external_id} - ${r.issue_title}` === key || r.issue_title === key
-      )
+      issueResults.value.find((r) => formatIssueLabel(r) === key || r.issue_title === key)
   }
 
   if (match) {
     form.externalIssueId = String(match.external_id)
     form.issueId = undefined
-    form.issueTitle = `#${match.external_id} - ${match.issue_title}`
+    form.issueTitle = formatIssueLabel(match)
     selectedIssueProjectName.value = match.project_name
 
-    // Auto-fill project if not filled
+    // Auto-fill project if not filled; warn if mismatch
     if (!form.projectId) {
       const localProj = projects.value.find(
         (p) =>
@@ -299,6 +302,20 @@ function onIssueSelected(title: string) {
         form.projectId = localProj.id
         form.isProjectManuallySelected = false
         isAutoFillingProject = false
+      }
+    } else {
+      const currentProj = projects.value.find((p) => p.id === form.projectId)
+      const sameProject =
+        currentProj &&
+        (currentProj.name.toLowerCase() === match.project_name.toLowerCase() ||
+          (currentProj.externalId && currentProj.externalId === match.project_external_id))
+      if (!sameProject) {
+        toast.add({
+          title: 'Project mismatch',
+          description: `This task belongs to "${match.project_name}", not "${currentProj?.name}". Saving will clear the task.`,
+          color: 'warning',
+          icon: 'i-lucide-alert-triangle'
+        })
       }
     }
   } else {
@@ -457,7 +474,16 @@ async function onDelete() {
 </script>
 
 <template>
-  <UModal :open="open" @update:open="$emit('update:open', $event)">
+  <UModal
+    :open="open"
+    :content="{
+      onPointerDownOutside: (e: Event) => {
+        if ((e as CustomEvent).detail?.originalEvent?.target?.closest?.('.combobox-dropdown'))
+          (e as Event).preventDefault()
+      }
+    }"
+    @update:open="$emit('update:open', $event)"
+  >
     <template #content>
       <UCard>
         <template #header>
