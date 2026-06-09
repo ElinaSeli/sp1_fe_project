@@ -2,8 +2,6 @@
 definePageMeta({
   layout: 'dashboard'
 })
-
-await navigateTo('/time-entries', { redirectCode: 301 })
 </script>
 
 <template>
