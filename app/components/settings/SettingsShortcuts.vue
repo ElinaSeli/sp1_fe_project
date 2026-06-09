@@ -40,7 +40,7 @@ const grouped = computed(() =>
         variant="ghost"
         color="neutral"
         size="sm"
-        @click="store.resetToDefaults"
+        @click="store.resetToDefaults()"
       >
         Reset to defaults
       </UButton>

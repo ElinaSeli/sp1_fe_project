@@ -35,9 +35,16 @@ function onKeydown(e: KeyboardEvent) {
   if (e.shiftKey) parts.push('Shift')
   if (e.metaKey) parts.push('Meta')
 
-  if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) return
+  let key = e.key
+  if (e.code.startsWith('Key')) {
+    key = e.code.slice(3)
+  } else if (e.code.startsWith('Digit')) {
+    key = e.code.slice(5)
+  }
 
-  parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key)
+  if (['Control', 'Alt', 'Shift', 'Meta'].includes(key)) return
+
+  parts.push(key.length === 1 ? key.toUpperCase() : key)
   emit('update:modelValue', parts.join('+'))
   capturing.value = false
 }
