@@ -66,11 +66,7 @@ const activeIssueName = computed({
 
 const allTags = computed(() => (Array.isArray(tagsStore.tags) ? tagsStore.tags : []))
 const availableTags = computed(() => {
-  let filtered = allTags.value
-  if (timerStore.draftEntry.projectId) {
-    filtered = allTags.value.filter((t) => t.projectId === timerStore.draftEntry.projectId)
-  }
-  return Array.from(new Set(filtered.map((t) => t.name)))
+  return Array.from(new Set(allTags.value.map((t) => t.name)))
 })
 
 const selectedTagNames = computed({

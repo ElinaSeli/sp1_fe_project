@@ -24,10 +24,12 @@ export const useTimerStore = defineStore(
       tagIds: [] as string[]
     })
 
+    const isSwappingDisabled = ref(false)
+
     watch(
       () => draftEntry.value.projectId,
       (newVal, oldVal) => {
-        if (oldVal !== null && oldVal !== undefined && newVal !== oldVal) {
+        if (!isSwappingDisabled.value && newVal !== oldVal) {
           const issuesStore = useIssuesStore()
           const tagsStore = useTagsStore()
 
@@ -61,7 +63,8 @@ export const useTimerStore = defineStore(
             draftEntry.value.tagIds = newTagIds
           }
         }
-      }
+      },
+      { flush: 'sync' }
     )
 
     const entries = ref<TimeEntryViewModel[]>([])
@@ -116,10 +119,13 @@ export const useTimerStore = defineStore(
         isRunning.value = true
         activeEntryId.value = response.data.id
         startTimestamp.value = new Date(response.data.timeStart).getTime()
+
+        isSwappingDisabled.value = true
         draftEntry.value.description = response.data.description || ''
         draftEntry.value.projectId = response.data.projectId
         draftEntry.value.issueId = response.data.issueId || null
         draftEntry.value.tagIds = response.data.tagIds || []
+        isSwappingDisabled.value = false
       } else {
         isRunning.value = false
         startTimestamp.value = null
@@ -282,10 +288,12 @@ export const useTimerStore = defineStore(
         await stopTimer()
       }
 
+      isSwappingDisabled.value = true
       draftEntry.value.description = entry.description || ''
       draftEntry.value.projectId = entry.projectId
       draftEntry.value.issueId = entry.issueId || null
       draftEntry.value.tagIds = [...(entry.tagIds || [])]
+      isSwappingDisabled.value = false
 
       try {
         await startTimer()
@@ -297,12 +305,14 @@ export const useTimerStore = defineStore(
     }
 
     function resetDraft() {
+      isSwappingDisabled.value = true
       draftEntry.value = {
         description: '',
         projectId: null,
         issueId: null,
         tagIds: []
       }
+      isSwappingDisabled.value = false
     }
 
     return {

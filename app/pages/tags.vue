@@ -13,9 +13,45 @@ const { projects } = storeToRefs(projectsStore)
 const toast = useToast()
 const confirm = useConfirm()
 
+interface DeduplicatedTag {
+  id: string
+  name: string
+  color: string
+  associatedProjects: { id: string; name: string }[]
+  tags: { id: string; projectId: string }[]
+}
+
+const deduplicatedTags = computed<DeduplicatedTag[]>(() => {
+  const all = tags.value || []
+  const groups = new Map<string, typeof all>()
+  for (const t of all) {
+    if (!groups.has(t.name)) {
+      groups.set(t.name, [])
+    }
+    groups.get(t.name)!.push(t)
+  }
+
+  const result: DeduplicatedTag[] = []
+  for (const [name, list] of groups.entries()) {
+    const first = list[0]!
+    const associatedProjects = list
+      .map((t) => projects.value.find((p) => p.id === t.projectId))
+      .filter(Boolean) as typeof projects.value
+
+    result.push({
+      id: name,
+      name,
+      color: first.color || '#6b7280',
+      associatedProjects,
+      tags: list.map((t) => ({ id: t.id, projectId: t.projectId }))
+    })
+  }
+  return result
+})
+
 const columns = [
   { id: 'name', key: 'name', label: 'Name' },
-  { id: 'projectId', key: 'projectId', label: 'Project' },
+  { id: 'projects', key: 'projects', label: 'Projects' },
   { id: 'color', key: 'color', label: 'Color' },
   { id: 'actions', key: 'actions' }
 ]
@@ -45,10 +81,10 @@ const onCreateNew = () => {
   isCreateOpen.value = true
 }
 
-async function onDeleteTag(tag: (typeof tags.value)[0]) {
+async function onDeleteTag(row: DeduplicatedTag) {
   const isConfirmed = await confirm({
     title: 'Delete Tag',
-    description: `Are you sure you want to delete the tag "${tag.name}"? This action cannot be undone.`,
+    description: `Are you sure you want to delete the tag "${row.name}"? This will delete it from all associated projects.`,
     confirmLabel: 'Delete',
     cancelLabel: 'Cancel',
     confirmColor: 'error'
@@ -56,18 +92,22 @@ async function onDeleteTag(tag: (typeof tags.value)[0]) {
 
   if (!isConfirmed) return
 
-  if (!tag.projectId) {
-    toast.add({
-      title: 'Error',
-      description: 'Cannot delete tag: missing project ID',
-      color: 'error'
-    })
-    return
+  let successCount = 0
+  for (const t of row.tags) {
+    const success = await tagsStore.deleteTag(t.projectId, t.id)
+    if (success) {
+      successCount++
+    }
   }
 
-  const success = await tagsStore.deleteTag(tag.projectId, tag.id)
-  if (success) {
+  if (successCount === row.tags.length) {
     toast.add({ title: 'Tag deleted successfully', color: 'primary' })
+  } else if (successCount > 0) {
+    toast.add({
+      title: 'Partial success',
+      description: `Deleted ${successCount} of ${row.tags.length} tag instances.`,
+      color: 'warning'
+    })
   } else {
     toast.add({
       title: 'Failed to delete tag',
@@ -109,14 +149,57 @@ watch(activeWorkspaceId, (id) => {
 
     <!-- Table -->
     <UCard>
-      <UTable :columns="columns" :data="tags" :loading="isLoading">
+      <UTable :columns="columns" :data="deduplicatedTags" :loading="isLoading">
         <template #name-cell="{ row }">
           <span class="font-medium text-gray-900 dark:text-white">{{ row.original.name }}</span>
         </template>
-        <template #projectId-cell="{ row }">
-          <span class="text-sm text-gray-600 dark:text-gray-300">
-            {{ projects.find((p) => p.id === row.original.projectId)?.name ?? '—' }}
-          </span>
+        <template #projects-cell="{ row }">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span v-if="row.original.associatedProjects.length === 0" class="text-sm text-gray-400"
+              >—</span
+            >
+            <span
+              v-else-if="row.original.associatedProjects.length === 1"
+              class="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded animate-in fade-in zoom-in-95 duration-200"
+            >
+              {{ row.original.associatedProjects[0]?.name }}
+            </span>
+            <template v-else>
+              <span
+                class="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded animate-in fade-in zoom-in-95 duration-200"
+              >
+                {{ row.original.associatedProjects[0]?.name }}
+              </span>
+              <UPopover>
+                <UButton
+                  color="neutral"
+                  variant="subtle"
+                  size="xs"
+                  class="text-[10px] py-0.5 px-1.5 font-bold cursor-pointer transition-all duration-200 hover:bg-primary-100 dark:hover:bg-primary-950/30 hover:text-primary-600 dark:hover:text-primary-400 animate-in fade-in zoom-in-95 duration-200"
+                >
+                  +{{ row.original.associatedProjects.length - 1 }} more
+                </UButton>
+                <template #content>
+                  <div class="p-3 max-w-xs space-y-2">
+                    <div
+                      class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest"
+                    >
+                      Associated Projects
+                    </div>
+                    <div class="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+                      <span
+                        v-for="p in row.original.associatedProjects"
+                        :key="p.id"
+                        class="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded animate-in fade-in zoom-in-95 duration-200"
+                      >
+                        {{ p.name }}
+                      </span>
+                    </div>
+                  </div>
+                </template>
+              </UPopover>
+            </template>
+          </div>
         </template>
         <template #color-cell="{ row }">
           <div class="flex items-center gap-2">

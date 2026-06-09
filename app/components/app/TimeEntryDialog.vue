@@ -23,6 +23,7 @@ const confirm = useConfirm()
 
 const isEdit = computed(() => Boolean(props.entry))
 const isLoading = ref(false)
+const isInitializing = ref(false)
 
 const projects = computed(() => projectsStore.projects)
 const filteredTags = computed(() => {
@@ -33,6 +34,18 @@ const filteredTags = computed(() => {
   }
   const uniqueNames = new Set<string>()
   const result: typeof all = []
+
+  // Safeguard: Ensure currently selected tags are always present in the items array
+  if (form.tagIds && form.tagIds.length > 0) {
+    for (const id of form.tagIds) {
+      const selectedTag = all.find((t) => t.id === id)
+      if (selectedTag) {
+        result.push(selectedTag)
+        uniqueNames.add(selectedTag.name)
+      }
+    }
+  }
+
   for (const tag of filtered) {
     if (!uniqueNames.has(tag.name)) {
       uniqueNames.add(tag.name)
@@ -50,6 +63,16 @@ const filteredIssues = computed(() => {
   }
   const uniqueNames = new Set<string>()
   const result: typeof all = []
+
+  // Safeguard: Ensure currently selected issue is always present in the items array
+  if (form.issueId) {
+    const selectedIssue = all.find((i) => i.id === form.issueId)
+    if (selectedIssue) {
+      result.push(selectedIssue)
+      uniqueNames.add(selectedIssue.name)
+    }
+  }
+
   for (const issue of filtered) {
     if (!uniqueNames.has(issue.name)) {
       uniqueNames.add(issue.name)
@@ -87,11 +110,13 @@ const form = reactive({
 watch(
   () => props.open,
   (open) => {
+    isInitializing.value = true
     if (!open) {
       form.projectId = undefined
       form.issueId = undefined
       form.tagIds = []
       form.description = ''
+      isInitializing.value = false
       return
     }
     if (props.entry) {
@@ -113,6 +138,7 @@ watch(
         ? toLocalInput(props.initialTimeEnd.toISOString())
         : defaultEnd()
     }
+    isInitializing.value = false
   }
 )
 
@@ -120,8 +146,7 @@ watch(
   () => form.projectId,
   (newVal, oldVal) => {
     // Only swap dependent fields if the project is actually changing from one value to another
-    // (ignores the initial set when the dialog opens, where oldVal is usually undefined or matches the entry)
-    if (oldVal !== undefined && newVal !== oldVal) {
+    if (!isInitializing.value && newVal !== oldVal) {
       // Swap Issue ID
       if (form.issueId) {
         const oldIssue = (issuesStore.issues || []).find((i) => i.id === form.issueId)
@@ -150,7 +175,8 @@ watch(
         form.tagIds = newTagIds
       }
     }
-  }
+  },
+  { flush: 'sync' }
 )
 
 const timeStartMs = computed(() => new Date(form.timeStart).getTime())
