@@ -3,6 +3,7 @@ const timerStore = useTimerStore()
 const workspacesStore = useWorkspacesStore()
 const projectsStore = useProjectsStore()
 const tagsStore = useTagsStore()
+const issuesStore = useIssuesStore()
 
 const description = computed({
   get: () => timerStore.draftEntry.description,
@@ -21,26 +22,54 @@ const activeProjectName = computed({
   set: (name: string) => {
     const p = projects.value.find((x) => x.name === name)
     timerStore.draftEntry.projectId = p ? p.id : null
+    timerStore.draftEntry.isProjectManuallySelected = true
   }
 })
 
 // --- Live Issue Search (Redmine pass-through) ---
 const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
-const activeProjectExternalId = computed(
-  () =>
-    projectsStore.projects.find((p) => p.id === timerStore.draftEntry.projectId)?.externalId ?? null
-)
 const {
   query: issueQuery,
   results: issueResults,
   isSearching: isSearchingIssues
-} = useIssueSearch(workspaceId, activeProjectExternalId)
+} = useIssueSearch(
+  workspaceId,
+  computed(() => null)
+)
 
 // Map search results to option labels for the combobox
-const issueOptions = computed(() => issueResults.value.map((r) => r.issue_title))
+const issueOptions = computed(() =>
+  issueResults.value.map((r) => `#${r.external_id} - ${r.issue_title}`)
+)
+
+const issueCache = new Map<
+  string,
+  { external_id: number; issue_title: string; project_name: string; project_external_id: string }
+>()
+
+watch(
+  () => issueResults.value,
+  (newResults) => {
+    if (newResults) {
+      for (const r of newResults) {
+        const key = `#${r.external_id} - ${r.issue_title}`
+        issueCache.set(key, r)
+      }
+    }
+  },
+  { immediate: true, deep: true }
+)
 
 // The currently selected issue label (for display in the combobox)
-const selectedIssueProjectName = ref('')
+const selectedIssueProjectName = computed(() => {
+  if (
+    timerStore.draftEntry.issueTitle &&
+    (timerStore.draftEntry.externalIssueId || timerStore.draftEntry.issueId)
+  ) {
+    return timerStore.draftEntry.issueProjectName || ''
+  }
+  return ''
+})
 
 const activeIssueName = computed({
   get: () => timerStore.draftEntry.issueTitle ?? '',
@@ -49,32 +78,47 @@ const activeIssueName = computed({
       timerStore.draftEntry.externalIssueId = null
       timerStore.draftEntry.issueTitle = ''
       timerStore.draftEntry.issueProjectName = ''
-      selectedIssueProjectName.value = ''
       return
     }
-    const match = issueResults.value.find((r) => r.issue_title === name)
+
+    let match = null
+    const matchId = name.trim().match(/^#(\d+)/)
+    if (matchId) {
+      const extId = Number(matchId[1])
+      match =
+        Array.from(issueCache.values()).find((r) => r.external_id === extId) ||
+        issueResults.value.find((r) => r.external_id === extId)
+    }
+
+    if (!match) {
+      const key = name.trim()
+      match =
+        issueCache.get(key) ||
+        issueResults.value.find(
+          (r) => `#${r.external_id} - ${r.issue_title}` === key || r.issue_title === key
+        )
+    }
+
     if (match) {
       timerStore.draftEntry.externalIssueId = String(match.external_id)
-      timerStore.draftEntry.issueTitle = match.issue_title
+      timerStore.draftEntry.issueTitle = `#${match.external_id} - ${match.issue_title}`
       timerStore.draftEntry.issueProjectName = match.project_name
-      selectedIssueProjectName.value = match.project_name
+
+      // Auto-fill project if not filled
+      if (!timerStore.draftEntry.projectId) {
+        const localProj = projects.value.find(
+          (p) =>
+            (p.externalId && p.externalId === match.project_external_id) ||
+            p.name.trim().toLowerCase() === match.project_name.trim().toLowerCase()
+        )
+        if (localProj) {
+          timerStore.draftEntry.projectId = localProj.id
+          timerStore.draftEntry.isProjectManuallySelected = false
+        }
+      }
     }
   }
 })
-
-// Initialize selectedIssueProjectName when projects or draftEntry project loads
-watch(
-  [() => timerStore.draftEntry.projectId, projects],
-  ([projId, projs]) => {
-    if (projId && projs.length > 0 && !selectedIssueProjectName.value) {
-      const proj = projs.find((p) => p.id === projId)
-      if (proj) {
-        selectedIssueProjectName.value = proj.name
-      }
-    }
-  },
-  { immediate: true }
-)
 
 const allTags = computed(() => (Array.isArray(tagsStore.tags) ? tagsStore.tags : []))
 const availableTags = computed(() => {
@@ -108,6 +152,7 @@ const selectedTagName = computed({
       timerStore.draftEntry.tagIds = [t.id]
       if (!timerStore.draftEntry.projectId && t.projectId) {
         timerStore.draftEntry.projectId = t.projectId
+        timerStore.draftEntry.isProjectManuallySelected = false
       }
     } else {
       timerStore.draftEntry.tagIds = []
@@ -134,7 +179,11 @@ watch(
   workspaceId,
   async (id) => {
     if (id) {
-      await Promise.all([projectsStore.fetchProjects(), tagsStore.fetchTags()])
+      await Promise.all([
+        projectsStore.fetchProjects(),
+        tagsStore.fetchTags(),
+        issuesStore.fetchIssues()
+      ])
     }
   },
   { immediate: true }

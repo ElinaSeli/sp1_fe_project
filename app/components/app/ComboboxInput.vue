@@ -398,6 +398,9 @@ const choose = (option, preventFocusOverride = false) => {
     query.value = option
     isOpen.value = false
     activeIdx.value = -1
+    nextTick(() => {
+      inputRef.value?.blur()
+    })
   }
 }
 

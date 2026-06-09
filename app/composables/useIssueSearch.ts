@@ -34,7 +34,42 @@ export function useIssueSearch(
     isSearching.value = true
     try {
       const { data } = await issuesService.search(wsId, q.trim(), projectExternalId.value)
-      results.value = data ?? []
+      const serverResults = data ?? []
+
+      // Look up in local issuesStore to find matching local issues by name or externalId
+      const issuesStore = useIssuesStore()
+      const projectsStore = useProjectsStore()
+      const localQuery = q.toLowerCase().trim()
+
+      const matchingLocal = (issuesStore.issues || []).filter((issue) => {
+        if (!issue.externalId) return false
+        return (
+          issue.name.toLowerCase().includes(localQuery) ||
+          String(issue.externalId).toLowerCase().includes(localQuery)
+        )
+      })
+
+      const mappedLocal: IssueSearchResult[] = matchingLocal.map((issue) => {
+        const proj = (projectsStore.projects || []).find((p) => p.id === issue.projectId)
+        return {
+          external_id: Number(issue.externalId),
+          issue_title: issue.name,
+          project_name: proj?.name || '',
+          project_external_id: proj?.externalId || ''
+        }
+      })
+
+      // Combine server results and local database matches, removing duplicates by external_id
+      const combined = [...serverResults, ...mappedLocal]
+      const uniqueResults: IssueSearchResult[] = []
+      const seenIds = new Set<number>()
+      for (const item of combined) {
+        if (!seenIds.has(item.external_id)) {
+          seenIds.add(item.external_id)
+          uniqueResults.push(item)
+        }
+      }
+      results.value = uniqueResults
     } catch {
       results.value = []
     } finally {

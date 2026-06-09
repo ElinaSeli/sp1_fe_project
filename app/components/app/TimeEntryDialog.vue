@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TimeEntry, CreateTimeEntryRequest, UpdateTimeEntryRequest } from '~/types'
+import type { TimeEntry } from '~/types'
 
 const props = defineProps<{
   open: boolean
@@ -58,15 +58,35 @@ const filteredTags = computed(() => {
 
 // Live Redmine issue search
 const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
-const activeProjectExternalId = computed(
-  () => projectsStore.projects.find((p) => p.id === form.projectId)?.externalId ?? null
-)
 const {
   query: issueQuery,
   results: issueResults,
   isSearching: isSearchingIssues
-} = useIssueSearch(workspaceId, activeProjectExternalId)
-const issueOptions = computed(() => issueResults.value.map((r) => r.issue_title))
+} = useIssueSearch(
+  workspaceId,
+  computed(() => null)
+)
+const issueOptions = computed(() =>
+  issueResults.value.map((r) => `#${r.external_id} - ${r.issue_title}`)
+)
+
+const issueCache = new Map<
+  string,
+  { external_id: number; issue_title: string; project_name: string; project_external_id: string }
+>()
+
+watch(
+  () => issueResults.value,
+  (newResults) => {
+    if (newResults) {
+      for (const r of newResults) {
+        const key = `#${r.external_id} - ${r.issue_title}`
+        issueCache.set(key, r)
+      }
+    }
+  },
+  { immediate: true, deep: true }
+)
 
 function toLocalInput(iso: string): string {
   const d = new Date(iso)
@@ -94,31 +114,97 @@ const form = reactive({
   issueTitle: '' as string,
   tagIds: [] as string[],
   timeStart: defaultStart(),
-  timeEnd: defaultEnd()
+  timeEnd: defaultEnd(),
+  isProjectManuallySelected: false
 })
 
 const selectedIssueProjectName = ref('')
+
+let isAutoFillingProject = false
+
+watch(
+  () => form.projectId,
+  (newVal) => {
+    console.log(
+      '[Watcher] form.projectId changed to:',
+      newVal,
+      'isInitializing:',
+      isInitializing.value,
+      'tagIds:',
+      JSON.stringify(form.tagIds)
+    )
+    if (isInitializing.value) return
+    if (!isAutoFillingProject) {
+      form.isProjectManuallySelected = true
+    }
+
+    // Clear system issue ID to allow backend to resolve new project's system issue
+    if (!form.externalIssueId) {
+      form.issueId = undefined
+    }
+
+    // Auto-swap tags
+    if (form.tagIds && form.tagIds.length > 0) {
+      const newTagIds: string[] = []
+      for (const oldId of form.tagIds) {
+        const oldTag = (tagsStore.tags || []).find((t) => t.id === oldId)
+        console.log('[Watcher] oldTag found:', JSON.stringify(oldTag))
+        if (oldTag) {
+          const newTag = (tagsStore.tags || []).find(
+            (t) =>
+              t.name.trim().toLowerCase() === oldTag.name.trim().toLowerCase() &&
+              t.projectId === newVal
+          )
+          console.log('[Watcher] newTag found for project', newVal, ':', JSON.stringify(newTag))
+          if (newTag) newTagIds.push(newTag.id)
+        }
+      }
+      console.log('[Watcher] setting form.tagIds to:', JSON.stringify(newTagIds))
+      form.tagIds = newTagIds
+    }
+  },
+  { flush: 'sync' }
+)
 
 const selectedTagId = computed({
   get: () => form.tagIds?.[0] || undefined,
   set: (val: string | undefined) => {
     form.tagIds = val ? [val] : []
+    // Auto-fill project if not filled
+    if (val && !form.projectId) {
+      const selectedTag = (tagsStore.tags || []).find((t) => t.id === val)
+      if (selectedTag && selectedTag.projectId) {
+        isAutoFillingProject = true
+        form.projectId = selectedTag.projectId
+        form.isProjectManuallySelected = false
+        isAutoFillingProject = false
+      }
+    }
   }
 })
 
 watch(
   () => props.open,
-  (open) => {
+  async (open) => {
     isInitializing.value = true
     if (!open) {
       form.projectId = undefined
       form.issueId = undefined
       form.tagIds = []
       form.description = ''
+      form.isProjectManuallySelected = false
       issueQuery.value = ''
       isInitializing.value = false
       return
     }
+
+    // Load projects, tags, and issues first to ensure local lists are fully populated
+    await Promise.all([
+      projectsStore.fetchProjects(),
+      tagsStore.fetchTags(),
+      issuesStore.fetchIssues()
+    ])
+
     const entry = props.entry
     if (entry) {
       form.description = entry.description ?? ''
@@ -129,25 +215,23 @@ watch(
       form.tagIds = [...(entry.tagIds ?? [])]
       form.timeStart = toLocalInput(entry.timeStart)
       form.timeEnd = entry.timeEnd ? toLocalInput(entry.timeEnd) : defaultEnd()
+      form.isProjectManuallySelected = true
       issueQuery.value = ''
 
       if (entry.issueId) {
         const localIssue = (issuesStore.issues || []).find((i) => i.id === entry.issueId)
-        if (localIssue) {
-          form.issueTitle = localIssue.name
-          form.externalIssueId = localIssue.externalId ?? undefined
+        if (localIssue && localIssue.externalId) {
+          form.issueTitle = `#${localIssue.externalId} - ${localIssue.name}`
+          form.externalIssueId = localIssue.externalId
           const proj = projects.value.find((p) => p.id === localIssue.projectId)
           if (proj) {
             selectedIssueProjectName.value = proj.name
           }
-        }
-      } else {
-        if (entry.projectId) {
-          const proj = projects.value.find((p) => p.id === entry.projectId)
-          selectedIssueProjectName.value = proj ? proj.name : ''
         } else {
           selectedIssueProjectName.value = ''
         }
+      } else {
+        selectedIssueProjectName.value = ''
       }
     } else {
       form.description = ''
@@ -162,6 +246,7 @@ watch(
       form.timeEnd = props.initialTimeEnd
         ? toLocalInput(props.initialTimeEnd.toISOString())
         : defaultEnd()
+      form.isProjectManuallySelected = false
       selectedIssueProjectName.value = ''
       issueQuery.value = ''
     }
@@ -169,27 +254,56 @@ watch(
   }
 )
 
-watch([() => form.projectId, projects], ([projId, projs]) => {
-  // DO NOT clear issue when project changes - allow mismatched selection
-  // Only validate and clear on save, not immediately
-
-  // Update selectedIssueProjectName when project changes ONLY if no issue is selected
-  if (projId && projs.length > 0 && !form.externalIssueId && !form.issueId) {
-    const proj = projs.find((p) => p.id === projId)
-    if (proj) {
-      selectedIssueProjectName.value = proj.name
-    }
-  }
-})
-
 function onIssueSelected(title: string) {
-  const match = issueResults.value.find((r) => r.issue_title === title)
+  if (!title) {
+    form.externalIssueId = undefined
+    form.issueId = undefined
+    form.issueTitle = ''
+    selectedIssueProjectName.value = ''
+    return
+  }
+
+  let match = null
+  const matchId = title.trim().match(/^#(\d+)/)
+  if (matchId) {
+    const extId = Number(matchId[1])
+    match =
+      Array.from(issueCache.values()).find((r) => r.external_id === extId) ||
+      issueResults.value.find((r) => r.external_id === extId)
+  }
+
+  if (!match) {
+    const key = title.trim()
+    match =
+      issueCache.get(key) ||
+      issueResults.value.find(
+        (r) => `#${r.external_id} - ${r.issue_title}` === key || r.issue_title === key
+      )
+  }
+
   if (match) {
     form.externalIssueId = String(match.external_id)
-    form.issueTitle = match.issue_title
+    form.issueId = undefined
+    form.issueTitle = `#${match.external_id} - ${match.issue_title}`
     selectedIssueProjectName.value = match.project_name
+
+    // Auto-fill project if not filled
+    if (!form.projectId) {
+      const localProj = projects.value.find(
+        (p) =>
+          (p.externalId && p.externalId === match.project_external_id) ||
+          p.name.trim().toLowerCase() === match.project_name.trim().toLowerCase()
+      )
+      if (localProj) {
+        isAutoFillingProject = true
+        form.projectId = localProj.id
+        form.isProjectManuallySelected = false
+        isAutoFillingProject = false
+      }
+    }
   } else {
     form.externalIssueId = undefined
+    form.issueId = undefined
     form.issueTitle = ''
     selectedIssueProjectName.value = ''
   }
@@ -215,44 +329,21 @@ async function onSubmit() {
   isLoading.value = true
   try {
     let saved: TimeEntry | null = null
-    let mismatch = false
 
-    // Check project-issue mismatch (case-insensitive)
-    const activeProj = projects.value.find((p) => p.id === form.projectId)
-    if (
-      activeProj &&
-      selectedIssueProjectName.value &&
-      activeProj.name.trim().toLowerCase() !== selectedIssueProjectName.value.trim().toLowerCase()
-    ) {
-      mismatch = true
-      form.issueId = undefined
-      form.externalIssueId = undefined
-      form.issueTitle = ''
-      selectedIssueProjectName.value = ''
+    const payloadFields = {
+      projectId: form.projectId ?? null,
+      issueId: form.externalIssueId ? null : (form.issueId ?? null),
+      externalIssueId: form.externalIssueId ?? null,
+      description: form.description || null,
+      timeStart: new Date(form.timeStart).toISOString(),
+      timeEnd: new Date(form.timeEnd).toISOString(),
+      tagIds: form.tagIds
     }
 
     if (isEdit.value && props.entry) {
-      const payload: UpdateTimeEntryRequest = {
-        projectId: form.projectId ?? null,
-        issueId: mismatch ? null : form.externalIssueId ? null : (form.issueId ?? null),
-        externalIssueId: mismatch ? null : (form.externalIssueId ?? null),
-        description: form.description || null,
-        timeStart: new Date(form.timeStart).toISOString(),
-        timeEnd: new Date(form.timeEnd).toISOString(),
-        tagIds: form.tagIds
-      }
-      saved = await timerStore.updateEntry(props.entry.id, payload)
+      saved = await timerStore.updateEntry(props.entry.id, payloadFields)
     } else {
-      const payload: CreateTimeEntryRequest = {
-        projectId: form.projectId ?? null,
-        issueId: mismatch ? null : form.externalIssueId ? null : (form.issueId ?? null),
-        externalIssueId: mismatch ? null : (form.externalIssueId ?? null),
-        description: form.description || null,
-        timeStart: new Date(form.timeStart).toISOString(),
-        timeEnd: new Date(form.timeEnd).toISOString(),
-        tagIds: form.tagIds
-      }
-      saved = await timerStore.createEntry(payload)
+      saved = await timerStore.createEntry(payloadFields)
     }
 
     if (!saved) {
@@ -264,28 +355,75 @@ async function onSubmit() {
       return
     }
 
-    if (mismatch) {
+    // Determine if there is an issue mismatch (only if project was manually selected by user)
+    let issueMismatch = false
+    if (
+      form.isProjectManuallySelected &&
+      form.projectId &&
+      (form.externalIssueId || form.issueId) &&
+      saved.projectId !== form.projectId
+    ) {
+      issueMismatch = true
+    }
+
+    // Target project ID after checking issue mismatch
+    const targetProjectId = issueMismatch ? form.projectId : saved.projectId
+
+    // Check tag mismatch based on target project ID
+    let tagMismatch = false
+    const validTagIds = (form.tagIds || []).filter((tagId) => {
+      const tag = (tagsStore.tags || []).find((t) => t.id === tagId)
+      if (tag && tag.projectId && targetProjectId && tag.projectId !== targetProjectId) {
+        tagMismatch = true
+        return false
+      }
+      return true
+    })
+
+    // If we have any mismatch, make a single follow-up update to clear mismatched values in the database
+    if (issueMismatch || tagMismatch) {
+      const followUp = await timerStore.updateEntry(saved.id, {
+        projectId: targetProjectId ?? null,
+        issueId: issueMismatch ? null : saved.issueId,
+        externalIssueId: null, // already resolved
+        description: saved.description,
+        timeStart: saved.timeStart,
+        timeEnd: saved.timeEnd || new Date().toISOString(),
+        tagIds: validTagIds
+      })
+      if (followUp) {
+        saved = followUp
+      }
+    }
+
+    if (issueMismatch || tagMismatch) {
+      let desc = ''
+      if (issueMismatch && tagMismatch) {
+        desc =
+          'The selected issue and tags do not belong to the selected project. The entry was saved, but they were cleared.'
+      } else if (issueMismatch) {
+        desc =
+          'The selected issue does not belong to the selected project. The entry was saved, but the issue was cleared.'
+      } else {
+        desc =
+          'The selected tags do not belong to the selected project. The entry was saved, but the tags were cleared.'
+      }
       toast.add({
         title: 'Project mismatch',
-        description:
-          'The selected issue does not belong to the selected project. The entry was saved, but the issue was cleared.',
+        description: desc,
         color: 'warning',
         icon: 'i-lucide-alert-triangle'
       })
     } else {
       toast.add({
-        title: isEdit.value ? 'Entry updated' : 'Entry created',
+        title: isEdit.value ? 'Time entry updated' : 'Time entry created',
         color: 'success',
         icon: 'i-lucide-check'
       })
     }
 
     emit('saved', saved)
-
-    // Only close dialog if there was no mismatch
-    if (!mismatch) {
-      emit('update:open', false)
-    }
+    emit('update:open', false)
   } finally {
     isLoading.value = false
   }
@@ -360,7 +498,7 @@ async function onDelete() {
               v-model="form.issueTitle"
               :options="issueOptions"
               :loading="isSearchingIssues"
-              :placeholder="form.projectId ? 'Search issue…' : 'Select a project first'"
+              placeholder="Search task (will set project if empty)…"
               :allow-custom="false"
               class="w-full"
               @query-change="(q) => (issueQuery = q)"

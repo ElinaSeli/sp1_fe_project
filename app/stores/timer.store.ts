@@ -28,7 +28,8 @@ export const useTimerStore = defineStore(
       issueTitle: '' as string,
       /** Project name of the selected Redmine issue. */
       issueProjectName: '' as string,
-      tagIds: [] as string[]
+      tagIds: [] as string[],
+      isProjectManuallySelected: false
     })
 
     const isSwappingDisabled = ref(false)
@@ -149,6 +150,30 @@ export const useTimerStore = defineStore(
 
       if (!workspacesStore.activeWorkspaceId) throw new Error('No active workspace')
 
+      // Auto-fill project from issue if projectId is empty
+      if (
+        !draftEntry.value.projectId &&
+        draftEntry.value.externalIssueId &&
+        draftEntry.value.issueProjectName
+      ) {
+        const localProj = projectsStore.projects.find(
+          (p) =>
+            p.name.trim().toLowerCase() === draftEntry.value.issueProjectName.trim().toLowerCase()
+        )
+        if (localProj) {
+          draftEntry.value.projectId = localProj.id
+        }
+      }
+
+      // Auto-fill project from tag if projectId is empty
+      if (!draftEntry.value.projectId && draftEntry.value.tagIds.length > 0) {
+        const tagsStore = useTagsStore()
+        const tag = (tagsStore.tags || []).find((t) => t.id === draftEntry.value.tagIds[0])
+        if (tag?.projectId) {
+          draftEntry.value.projectId = tag.projectId
+        }
+      }
+
       // Graceful validation: if the project ID is ghost/stale, clear it before sending
       if (
         draftEntry.value.projectId &&
@@ -196,63 +221,138 @@ export const useTimerStore = defineStore(
           const entry = response.data
 
           const projectsStore = useProjectsStore()
-          const activeProj = projectsStore.projects.find((p) => p.id === entry.projectId)
-          let mismatch = false
-          if (
-            activeProj &&
-            draftEntry.value.issueProjectName &&
-            activeProj.name.trim().toLowerCase() !==
-              draftEntry.value.issueProjectName.trim().toLowerCase()
-          ) {
-            mismatch = true
+          const tagsStore = useTagsStore()
+
+          // Auto-fill project if empty on stopped entry
+          let finalProjectId = entry.projectId
+          if (!finalProjectId) {
+            // Try to find project from draft issue
+            if (draftEntry.value.issueProjectName) {
+              const matchedProj = projectsStore.projects.find(
+                (p) =>
+                  p.name.trim().toLowerCase() ===
+                  draftEntry.value.issueProjectName.trim().toLowerCase()
+              )
+              if (matchedProj) finalProjectId = matchedProj.id
+            }
+            // Try to find project from draft tag
+            if (!finalProjectId && draftEntry.value.tagIds.length > 0) {
+              const tag = (tagsStore.tags || []).find((t) => t.id === draftEntry.value.tagIds[0])
+              if (tag?.projectId) finalProjectId = tag.projectId
+            }
+            if (finalProjectId) {
+              entry.projectId = finalProjectId
+            }
           }
 
-          // Backend workaround: timer/stop does not persist tagIds or externalIssueId.
-          // Send a follow-up PUT whenever we have tags OR a Redmine issue to save.
-          const hasTags = draftEntry.value.tagIds && draftEntry.value.tagIds.length > 0
-          const hasExternalIssue = !mismatch && !!draftEntry.value.externalIssueId
-          if (hasTags || hasExternalIssue || mismatch) {
-            await timeEntriesService.update(workspacesStore.activeWorkspaceId, entry.id, {
-              projectId: entry.projectId,
-              issueId: null, // Clear local issue if mismatch or using external issue
+          if (!draftEntry.value.projectId && entry.projectId) {
+            draftEntry.value.projectId = entry.projectId
+          }
+
+          const hasExternalIssue = !!draftEntry.value.externalIssueId
+          const hasLocalIssue = !!draftEntry.value.issueId
+
+          // Call update to save matching tags/issues
+          const updateResponse = await timeEntriesService.update(
+            workspacesStore.activeWorkspaceId,
+            entry.id,
+            {
+              projectId: draftEntry.value.projectId || entry.projectId,
+              issueId: hasLocalIssue ? draftEntry.value.issueId : null,
               externalIssueId: hasExternalIssue ? draftEntry.value.externalIssueId : null,
-              description: entry.description,
+              description: draftEntry.value.description || null,
               timeStart: entry.timeStart,
               timeEnd: entry.timeEnd ?? new Date().toISOString(),
               tagIds: draftEntry.value.tagIds
-            })
-            // Patch the local entry object so the list reflects the saved state
-            if (hasTags) entry.tagIds = [...draftEntry.value.tagIds]
+            }
+          )
+
+          let finalEntry = updateResponse.data || entry
+
+          // Determine if there is an issue mismatch (only if project was manually selected by user)
+          let issueMismatch = false
+          if (
+            draftEntry.value.isProjectManuallySelected &&
+            draftEntry.value.projectId &&
+            (draftEntry.value.externalIssueId || draftEntry.value.issueId) &&
+            finalEntry.projectId !== draftEntry.value.projectId
+          ) {
+            issueMismatch = true
           }
 
-          if (mismatch) {
+          // Target project ID after checking issue mismatch
+          const targetProjectId = issueMismatch ? draftEntry.value.projectId : finalEntry.projectId
+
+          // Check tag mismatch based on target project ID
+          let tagMismatch = false
+          const validTagIds = (draftEntry.value.tagIds || []).filter((tagId) => {
+            const tag = (tagsStore.tags || []).find((t) => t.id === tagId)
+            if (tag && tag.projectId && targetProjectId && tag.projectId !== targetProjectId) {
+              tagMismatch = true
+              return false
+            }
+            return true
+          })
+
+          // If we have any mismatch, make a single follow-up update to clear mismatched values in the database
+          if (issueMismatch || tagMismatch) {
+            const followUpResponse = await timeEntriesService.update(
+              workspacesStore.activeWorkspaceId,
+              finalEntry.id,
+              {
+                projectId: targetProjectId,
+                issueId: issueMismatch ? null : finalEntry.issueId,
+                externalIssueId: null, // already resolved
+                description: finalEntry.description,
+                timeStart: finalEntry.timeStart,
+                timeEnd: finalEntry.timeEnd || new Date().toISOString(),
+                tagIds: validTagIds
+              }
+            )
+            if (followUpResponse.data) {
+              finalEntry = followUpResponse.data
+            }
+          }
+
+          if (issueMismatch || tagMismatch) {
+            let desc = ''
+            if (issueMismatch && tagMismatch) {
+              desc =
+                'The selected task and tags do not belong to the selected project. They were cleared from the saved entry.'
+            } else if (issueMismatch) {
+              desc = `The task "${draftEntry.value.issueTitle}" does not belong to the selected project. The entry was saved, but the task was cleared.`
+            } else {
+              desc =
+                'The selected tags do not belong to the selected project. The entry was saved, but the tags were cleared.'
+            }
             toast.add({
               title: 'Project mismatch',
-              description: `The issue "${draftEntry.value.issueTitle}" does not belong to the selected project. The entry was saved, but the issue was cleared.`,
+              description: desc,
               color: 'warning',
               icon: 'i-lucide-alert-triangle'
             })
           }
 
           // Capture draft values before resetDraft() clears them
-          const savedIssueTitle = mismatch ? '' : draftEntry.value.issueTitle
-          const savedTagIds = [...draftEntry.value.tagIds]
+          const savedIssueTitle = issueMismatch ? '' : draftEntry.value.issueTitle
           entries.value.unshift({
-            id: entry.id,
-            description: entry.description || '',
-            projectId: entry.projectId,
-            issueId: mismatch ? null : (entry.issueId ?? null),
+            id: finalEntry.id,
+            description: finalEntry.description || '',
+            projectId: finalEntry.projectId,
+            issueId: finalEntry.issueId ?? null,
             issueTitle: savedIssueTitle,
-            tagIds: entry.tagIds ?? savedTagIds,
-            duration: entry.timeEnd
+            tagIds: finalEntry.tagIds ?? [],
+            duration: finalEntry.timeEnd
               ? Math.floor(
-                  (new Date(entry.timeEnd).getTime() - new Date(entry.timeStart).getTime()) / 1000
+                  (new Date(finalEntry.timeEnd).getTime() -
+                    new Date(finalEntry.timeStart).getTime()) /
+                    1000
                 )
               : 0,
-            timeStart: entry.timeStart,
-            timeEnd: entry.timeEnd
+            timeStart: finalEntry.timeStart,
+            timeEnd: finalEntry.timeEnd
           })
-          rawEntries.value.unshift(entry)
+          rawEntries.value.unshift(finalEntry)
           isRunning.value = false
           startTimestamp.value = null
           activeEntryId.value = null
@@ -377,7 +477,8 @@ export const useTimerStore = defineStore(
         externalIssueId: null,
         issueTitle: '',
         issueProjectName: '',
-        tagIds: []
+        tagIds: [],
+        isProjectManuallySelected: false
       }
       isSwappingDisabled.value = false
     }
