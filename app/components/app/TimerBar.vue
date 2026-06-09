@@ -270,6 +270,11 @@ watch([description, descFocused], () => {
   else descOverflowing.value = false
 })
 
+const focusDescInput = () => {
+  descFocused.value = true
+  nextTick(() => descriptionInput.value?.focus())
+}
+
 const onTimerBarFocusout = (e: FocusEvent) => {
   const currentTarget = e.currentTarget as Node | null
   if (currentTarget && !currentTarget.contains(e.relatedTarget as Node)) {
@@ -377,10 +382,7 @@ onUnmounted(() => {
               v-if="!descFocused && description"
               ref="descDisplayRef"
               class="absolute inset-0 flex items-center overflow-hidden cursor-text"
-              @click="
-                descFocused = true
-                $nextTick(() => descriptionInput?.focus())
-              "
+              @click="focusDescInput"
             >
               <span
                 ref="descTextRef"
