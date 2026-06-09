@@ -250,10 +250,11 @@ onMounted(() => workspacesStore.fetchWorkspaces())
                 Cancel
               </UButton>
               <UButton
-                type="submit"
+                type="button"
                 color="primary"
                 :loading="isLoading"
                 :disabled="!createState.name.trim()"
+                @click="onCreateSubmit"
               >
                 Create Workspace
               </UButton>

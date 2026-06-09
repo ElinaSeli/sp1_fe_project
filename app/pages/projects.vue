@@ -220,10 +220,11 @@ watch(activeWorkspaceId, (id) => {
                 Cancel
               </UButton>
               <UButton
-                type="submit"
+                type="button"
                 color="primary"
                 :loading="isLoading"
                 :disabled="!createState.name.trim()"
+                @click="onCreateSubmit"
               >
                 Create Project
               </UButton>
@@ -270,10 +271,11 @@ watch(activeWorkspaceId, (id) => {
                 Cancel
               </UButton>
               <UButton
-                type="submit"
+                type="button"
                 color="primary"
                 :loading="isLoading"
                 :disabled="!editState.name.trim()"
+                @click="onEditSubmit"
               >
                 Save Changes
               </UButton>
