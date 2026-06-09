@@ -74,6 +74,7 @@ export interface Project {
   workspaceId: string
   name: string
   color?: string | null
+  isSystem: boolean
   isExternal: boolean
   externalId?: string | null
 }
@@ -86,6 +87,7 @@ export interface CreateProjectRequest {
 export interface UpdateProjectRequest {
   name: string
   description?: string | null
+  color?: string | null
 }
 
 export interface ProjectListResponse {
