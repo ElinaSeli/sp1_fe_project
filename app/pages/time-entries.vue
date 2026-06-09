@@ -187,7 +187,7 @@ const groupedEntries = computed(() => {
               "
               :style="
                 getProjectColor(entry.projectId)
-                  ? { '--project-color': getProjectColor(entry.projectId) }
+                  ? { '--project-color': getProjectColor(entry.projectId)! }
                   : {}
               "
             />
@@ -205,7 +205,7 @@ const groupedEntries = computed(() => {
                   "
                   :style="
                     getProjectColor(entry.projectId)
-                      ? { '--project-color': getProjectColor(entry.projectId) }
+                      ? { '--project-color': getProjectColor(entry.projectId)! }
                       : {}
                   "
                 >

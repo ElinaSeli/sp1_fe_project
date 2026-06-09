@@ -53,9 +53,16 @@ function openEdit(project: Project) {
 }
 
 async function onEditSubmit() {
-  if (!editingProject.value || !editState.name.trim()) return
+  if (!editingProject.value) return
+  const isReadOnly = editingProject.value.isSystem || editingProject.value.isExternal
+  if (!isReadOnly && !editState.name.trim()) return
 
-  const result = await projectsStore.updateProject(editingProject.value.id, { ...editState })
+  const payload = {
+    name: isReadOnly ? editingProject.value.name : editState.name,
+    color: editState.color ?? undefined
+  }
+
+  const result = await projectsStore.updateProject(editingProject.value.id, payload)
   if (!result) {
     toast.add({
       title: 'Failed to update project',
@@ -146,18 +153,28 @@ watch(activeWorkspaceId, (id) => {
             :class="
               row.original.isExternal
                 ? 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300'
-                : 'bg-primary-50 dark:bg-primary-950 text-primary-700 dark:text-primary-300'
+                : row.original.isSystem
+                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                  : 'bg-primary-50 dark:bg-primary-950 text-primary-700 dark:text-primary-300'
             "
           >
             <UIcon
-              :name="row.original.isExternal ? 'i-lucide-plug' : 'i-lucide-circle-dot'"
+              :name="
+                row.original.isExternal
+                  ? 'i-lucide-plug'
+                  : row.original.isSystem
+                    ? 'i-lucide-shield'
+                    : 'i-lucide-circle-dot'
+              "
               class="text-[10px]"
             />
-            {{ row.original.isExternal ? 'Integration' : 'Local' }}
+            {{
+              row.original.isExternal ? 'Integration' : row.original.isSystem ? 'System' : 'Local'
+            }}
           </span>
         </template>
         <template #actions-cell="{ row }">
-          <div v-if="!row.original.isExternal" class="flex items-center justify-end gap-1">
+          <div class="flex items-center justify-end gap-1">
             <UButton
               icon="i-lucide-pencil"
               size="xs"
@@ -166,6 +183,7 @@ watch(activeWorkspaceId, (id) => {
               @click="openEdit(row.original)"
             />
             <UButton
+              v-if="!row.original.isExternal && !row.original.isSystem"
               icon="i-lucide-trash-2"
               size="xs"
               color="error"
@@ -246,13 +264,32 @@ watch(activeWorkspaceId, (id) => {
           </template>
 
           <form class="space-y-4" @submit.prevent="onEditSubmit">
-            <UFormField label="Project Name" name="name" required>
+            <UFormField
+              label="Project Name"
+              name="name"
+              :required="!editingProject?.isExternal && !editingProject?.isSystem"
+            >
               <UInput
                 v-model="editState.name"
                 placeholder="e.g. Mobile App, Client Portal"
-                autofocus
+                :disabled="editingProject?.isExternal || editingProject?.isSystem"
+                :autofocus="!editingProject?.isExternal && !editingProject?.isSystem"
                 class="w-full"
               />
+              <p
+                v-if="editingProject?.isSystem"
+                class="text-xs text-amber-500 mt-1.5 flex items-center gap-1"
+              >
+                <UIcon name="i-lucide-info" class="shrink-0" />
+                This is a system project. Its name cannot be changed.
+              </p>
+              <p
+                v-else-if="editingProject?.isExternal"
+                class="text-xs text-amber-500 mt-1.5 flex items-center gap-1"
+              >
+                <UIcon name="i-lucide-info" class="shrink-0" />
+                Name is managed by the integration and cannot be changed here.
+              </p>
             </UFormField>
 
             <UFormField label="Color" name="color">
@@ -261,6 +298,7 @@ watch(activeWorkspaceId, (id) => {
                   v-model="editState.color"
                   type="color"
                   class="w-10 h-10 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent p-0.5"
+                  :autofocus="editingProject?.isExternal || editingProject?.isSystem"
                 />
                 <span class="text-sm font-mono text-gray-500">{{ editState.color }}</span>
               </div>
@@ -274,7 +312,9 @@ watch(activeWorkspaceId, (id) => {
                 type="button"
                 color="primary"
                 :loading="isLoading"
-                :disabled="!editState.name.trim()"
+                :disabled="
+                  !editingProject?.isExternal && !editingProject?.isSystem && !editState.name.trim()
+                "
                 @click="onEditSubmit"
               >
                 Save Changes
