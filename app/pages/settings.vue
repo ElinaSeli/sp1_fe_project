@@ -15,7 +15,9 @@ const tabs = [
   <div class="max-w-3xl mx-auto py-8 px-4">
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Settings</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your account and preferences</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Manage your account and preferences
+      </p>
     </div>
 
     <UTabs :items="tabs" class="w-full">

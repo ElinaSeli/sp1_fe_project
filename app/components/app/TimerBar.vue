@@ -69,39 +69,36 @@ const availableTags = computed(() => {
   return Array.from(new Set(allTags.value.map((t) => t.name)))
 })
 
-const selectedTagNames = computed({
+const selectedTagName = computed({
   get: () => {
     const currentIds = timerStore.draftEntry.tagIds || []
-    return currentIds
-      .map((id) => allTags.value.find((t) => t.id === id)?.name)
-      .filter(Boolean) as string[]
+    if (currentIds.length === 0) return ''
+    const id = currentIds[0]
+    return allTags.value.find((t) => t.id === id)?.name || ''
   },
-  set: (names: string[]) => {
-    const newIds: string[] = []
-    let autoProject: string | null = null
-
-    for (const n of names) {
-      let t = null
-      if (timerStore.draftEntry.projectId) {
-        t = allTags.value.find(
-          (x) => x.name === n && x.projectId === timerStore.draftEntry.projectId
-        )
-      }
-      if (!t) {
-        t = allTags.value.find((x) => x.name === n)
-      }
-      if (t?.id) {
-        newIds.push(t.id)
-        if (!autoProject && t.projectId) {
-          autoProject = t.projectId
-        }
-      }
+  set: (name: string) => {
+    if (!name) {
+      timerStore.draftEntry.tagIds = []
+      return
     }
 
-    timerStore.draftEntry.tagIds = newIds
+    let t = null
+    if (timerStore.draftEntry.projectId) {
+      t = allTags.value.find(
+        (x) => x.name === name && x.projectId === timerStore.draftEntry.projectId
+      )
+    }
+    if (!t) {
+      t = allTags.value.find((x) => x.name === name)
+    }
 
-    if (autoProject && !timerStore.draftEntry.projectId) {
-      timerStore.draftEntry.projectId = autoProject
+    if (t?.id) {
+      timerStore.draftEntry.tagIds = [t.id]
+      if (!timerStore.draftEntry.projectId && t.projectId) {
+        timerStore.draftEntry.projectId = t.projectId
+      }
+    } else {
+      timerStore.draftEntry.tagIds = []
     }
   }
 })
@@ -248,10 +245,10 @@ onUnmounted(() => {
         <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
 
         <AppComboboxInput
-          v-model="selectedTagNames"
+          v-model="selectedTagName"
           :options="availableTags"
-          placeholder="Tags"
-          :multiple="true"
+          placeholder="Tag"
+          :multiple="false"
           :dark="true"
           class="flex-1 min-w-[100px] md:w-32 lg:w-40"
         />

@@ -162,6 +162,8 @@ export interface StartTimerRequest {
   projectId?: string | null
   issueId?: string | null
   description?: string | null
+  /** Tags to associate with the entry at start time. */
+  tagIds?: string[]
 }
 
 export interface UpdateTimeEntryRequest {
@@ -252,6 +254,10 @@ export interface TimeEntryViewModel {
   id: string
   description: string
   projectId: string | null
+  /** Preserved from raw TimeEntry so the edit dialog and resume flow can read it. */
+  issueId: string | null
+  /** Preserved from raw TimeEntry so tags are visible in the list and edit dialog. */
+  tagIds: string[]
   duration: number
   timeStart: string
   timeEnd: string | null

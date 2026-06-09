@@ -97,6 +97,8 @@ export const useTimerStore = defineStore(
             id: e.id,
             description: e.description || '',
             projectId: e.projectId,
+            issueId: e.issueId ?? null,
+            tagIds: e.tagIds ?? [],
             duration: e.timeEnd
               ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
               : 0,
@@ -157,7 +159,8 @@ export const useTimerStore = defineStore(
         const response = await timerService.start(workspacesStore.activeWorkspaceId, {
           description: draftEntry.value.description || null,
           projectId: draftEntry.value.projectId,
-          issueId: draftEntry.value.issueId || null
+          issueId: draftEntry.value.issueId || null,
+          tagIds: draftEntry.value.tagIds.length > 0 ? draftEntry.value.tagIds : undefined
         })
 
         if (response.data) {
@@ -183,10 +186,26 @@ export const useTimerStore = defineStore(
         if (response.data) {
           const entry = response.data
 
+          // Backend workaround: timer/stop does not persist tagIds.
+          // Immediately follow up with a PUT to save the current draft tags.
+          if (draftEntry.value.tagIds && draftEntry.value.tagIds.length > 0) {
+            await timeEntriesService.update(workspacesStore.activeWorkspaceId, entry.id, {
+              projectId: entry.projectId,
+              issueId: entry.issueId,
+              description: entry.description,
+              timeStart: entry.timeStart,
+              timeEnd: entry.timeEnd ?? new Date().toISOString(),
+              tagIds: draftEntry.value.tagIds
+            })
+            // Patch the local entry object so the list renders tags immediately
+            entry.tagIds = [...draftEntry.value.tagIds]
+          }
           entries.value.unshift({
             id: entry.id,
             description: entry.description || '',
             projectId: entry.projectId,
+            issueId: entry.issueId ?? null,
+            tagIds: entry.tagIds ?? [],
             duration: entry.timeEnd
               ? Math.floor(
                   (new Date(entry.timeEnd).getTime() - new Date(entry.timeStart).getTime()) / 1000
@@ -221,6 +240,8 @@ export const useTimerStore = defineStore(
         id: e.id,
         description: e.description || '',
         projectId: e.projectId,
+        issueId: e.issueId ?? null,
+        tagIds: e.tagIds ?? [],
         duration: e.timeEnd
           ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
           : 0,
@@ -253,6 +274,8 @@ export const useTimerStore = defineStore(
           id: e.id,
           description: e.description || '',
           projectId: e.projectId,
+          issueId: e.issueId ?? null,
+          tagIds: e.tagIds ?? [],
           duration: e.timeEnd
             ? Math.floor((new Date(e.timeEnd).getTime() - new Date(e.timeStart).getTime()) / 1000)
             : 0,
