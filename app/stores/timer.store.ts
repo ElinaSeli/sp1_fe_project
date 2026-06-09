@@ -16,6 +16,7 @@ export const useTimerStore = defineStore(
     const isStopping = ref(false)
     const startTimestamp = ref<number | null>(null)
     const activeEntryId = ref<string | null>(null)
+    const toast = useToast()
 
     const draftEntry = ref({
       description: '',
@@ -25,6 +26,8 @@ export const useTimerStore = defineStore(
       externalIssueId: null as string | null,
       /** Display label for the selected Redmine issue (not saved to BE). */
       issueTitle: '' as string,
+      /** Project name of the selected Redmine issue. */
+      issueProjectName: '' as string,
       tagIds: [] as string[]
     })
 
@@ -192,15 +195,27 @@ export const useTimerStore = defineStore(
         if (response.data) {
           const entry = response.data
 
+          const projectsStore = useProjectsStore()
+          const activeProj = projectsStore.projects.find((p) => p.id === entry.projectId)
+          let mismatch = false
+          if (
+            activeProj &&
+            draftEntry.value.issueProjectName &&
+            activeProj.name.trim().toLowerCase() !==
+              draftEntry.value.issueProjectName.trim().toLowerCase()
+          ) {
+            mismatch = true
+          }
+
           // Backend workaround: timer/stop does not persist tagIds or externalIssueId.
           // Send a follow-up PUT whenever we have tags OR a Redmine issue to save.
           const hasTags = draftEntry.value.tagIds && draftEntry.value.tagIds.length > 0
-          const hasExternalIssue = !!draftEntry.value.externalIssueId
-          if (hasTags || hasExternalIssue) {
+          const hasExternalIssue = !mismatch && !!draftEntry.value.externalIssueId
+          if (hasTags || hasExternalIssue || mismatch) {
             await timeEntriesService.update(workspacesStore.activeWorkspaceId, entry.id, {
               projectId: entry.projectId,
-              issueId: hasExternalIssue ? null : entry.issueId,
-              externalIssueId: draftEntry.value.externalIssueId || null,
+              issueId: null, // Clear local issue if mismatch or using external issue
+              externalIssueId: hasExternalIssue ? draftEntry.value.externalIssueId : null,
               description: entry.description,
               timeStart: entry.timeStart,
               timeEnd: entry.timeEnd ?? new Date().toISOString(),
@@ -210,14 +225,23 @@ export const useTimerStore = defineStore(
             if (hasTags) entry.tagIds = [...draftEntry.value.tagIds]
           }
 
+          if (mismatch) {
+            toast.add({
+              title: 'Project mismatch',
+              description: `The issue "${draftEntry.value.issueTitle}" does not belong to the selected project. The entry was saved, but the issue was cleared.`,
+              color: 'warning',
+              icon: 'i-lucide-alert-triangle'
+            })
+          }
+
           // Capture draft values before resetDraft() clears them
-          const savedIssueTitle = draftEntry.value.issueTitle
+          const savedIssueTitle = mismatch ? '' : draftEntry.value.issueTitle
           const savedTagIds = [...draftEntry.value.tagIds]
           entries.value.unshift({
             id: entry.id,
             description: entry.description || '',
             projectId: entry.projectId,
-            issueId: entry.issueId ?? null,
+            issueId: mismatch ? null : (entry.issueId ?? null),
             issueTitle: savedIssueTitle,
             tagIds: entry.tagIds ?? savedTagIds,
             duration: entry.timeEnd
@@ -352,6 +376,7 @@ export const useTimerStore = defineStore(
         issueId: null,
         externalIssueId: null,
         issueTitle: '',
+        issueProjectName: '',
         tagIds: []
       }
       isSwappingDisabled.value = false

@@ -17,6 +17,7 @@ const emit = defineEmits<{
 const timerStore = useTimerStore()
 const projectsStore = useProjectsStore()
 const tagsStore = useTagsStore()
+const issuesStore = useIssuesStore()
 const workspacesStore = useWorkspacesStore()
 const toast = useToast()
 const confirm = useConfirm()
@@ -117,22 +118,34 @@ watch(
       isInitializing.value = false
       return
     }
-    if (props.entry) {
-      form.description = props.entry.description ?? ''
-      form.projectId = props.entry.projectId ?? undefined
-      form.issueId = props.entry.issueId ?? undefined
+    const entry = props.entry
+    if (entry) {
+      form.description = entry.description ?? ''
+      form.projectId = entry.projectId ?? undefined
+      form.issueId = entry.issueId ?? undefined
       form.externalIssueId = undefined
       form.issueTitle = ''
-      form.tagIds = [...(props.entry.tagIds ?? [])]
-      form.timeStart = toLocalInput(props.entry.timeStart)
-      form.timeEnd = props.entry.timeEnd ? toLocalInput(props.entry.timeEnd) : defaultEnd()
+      form.tagIds = [...(entry.tagIds ?? [])]
+      form.timeStart = toLocalInput(entry.timeStart)
+      form.timeEnd = entry.timeEnd ? toLocalInput(entry.timeEnd) : defaultEnd()
 
-      const entry = props.entry
-      if (entry && entry.projectId) {
-        const proj = projects.value.find((p) => p.id === entry.projectId)
-        selectedIssueProjectName.value = proj ? proj.name : ''
+      if (entry.issueId) {
+        const localIssue = (issuesStore.issues || []).find((i) => i.id === entry.issueId)
+        if (localIssue) {
+          form.issueTitle = localIssue.name
+          form.externalIssueId = localIssue.externalId ?? undefined
+          const proj = projects.value.find((p) => p.id === localIssue.projectId)
+          if (proj) {
+            selectedIssueProjectName.value = proj.name
+          }
+        }
       } else {
-        selectedIssueProjectName.value = ''
+        if (entry.projectId) {
+          const proj = projects.value.find((p) => p.id === entry.projectId)
+          selectedIssueProjectName.value = proj ? proj.name : ''
+        } else {
+          selectedIssueProjectName.value = ''
+        }
       }
     } else {
       form.description = ''
@@ -165,80 +178,12 @@ watch(
   { immediate: true }
 )
 
-watch(
-  () => form.projectId,
-  (newProjId, oldProjId) => {
-    if (newProjId !== oldProjId) {
-      if (!newProjId) {
-        form.issueId = undefined
-        form.externalIssueId = undefined
-        form.issueTitle = ''
-        selectedIssueProjectName.value = ''
-        return
-      }
-      const currentProj = projects.value.find((p) => p.id === newProjId)
-      if (
-        currentProj &&
-        selectedIssueProjectName.value &&
-        currentProj.name !== selectedIssueProjectName.value
-      ) {
-        form.issueId = undefined
-        form.externalIssueId = undefined
-        form.issueTitle = ''
-        selectedIssueProjectName.value = ''
-
-        toast.add({
-          title: 'Issue cleared',
-          description: 'The selected issue does not belong to the new project.',
-          color: 'warning',
-          icon: 'i-lucide-info'
-        })
-      }
-    }
-    isInitializing.value = false
-  }
-)
-
-watch(
-  () => form.projectId,
-  (newVal, oldVal) => {
-    // Only swap dependent fields if the project is actually changing from one value to another
-    if (!isInitializing.value && newVal !== oldVal) {
-      // Swap Tag ID
-      if (form.tagIds && form.tagIds.length > 0) {
-        const oldId = form.tagIds[0]
-        const oldTag = (tagsStore.tags || []).find((t) => t.id === oldId)
-        if (oldTag) {
-          const newTag = (tagsStore.tags || []).find(
-            (t) => t.name === oldTag.name && t.projectId === newVal
-          )
-          form.tagIds = newTag ? [newTag.id] : []
-        } else {
-          form.tagIds = []
-        }
-      }
-    }
-  },
-  { flush: 'sync' }
-)
-
 function onIssueSelected(title: string) {
   const match = issueResults.value.find((r) => r.issue_title === title)
   if (match) {
     form.externalIssueId = String(match.external_id)
     form.issueTitle = match.issue_title
     selectedIssueProjectName.value = match.project_name
-    const proj = projects.value.find((p) => p.name === match.project_name)
-    if (proj) {
-      form.projectId = proj.id
-    } else {
-      toast.add({
-        title: 'Project mismatch',
-        description: `This issue belongs to project "${match.project_name}", which is not in this workspace.`,
-        color: 'warning',
-        icon: 'i-lucide-alert-triangle'
-      })
-    }
   } else {
     form.externalIssueId = undefined
     form.issueTitle = ''
@@ -258,11 +203,27 @@ async function onSubmit() {
   isLoading.value = true
   try {
     let saved: TimeEntry | null = null
+    let mismatch = false
+
+    // Check project-issue mismatch (case-insensitive)
+    const activeProj = projects.value.find((p) => p.id === form.projectId)
+    if (
+      activeProj &&
+      selectedIssueProjectName.value &&
+      activeProj.name.trim().toLowerCase() !== selectedIssueProjectName.value.trim().toLowerCase()
+    ) {
+      mismatch = true
+      form.issueId = undefined
+      form.externalIssueId = undefined
+      form.issueTitle = ''
+      selectedIssueProjectName.value = ''
+    }
+
     if (isEdit.value && props.entry) {
       const payload: UpdateTimeEntryRequest = {
         projectId: form.projectId ?? null,
-        issueId: form.externalIssueId ? null : (form.issueId ?? null),
-        externalIssueId: form.externalIssueId ?? null,
+        issueId: mismatch ? null : form.externalIssueId ? null : (form.issueId ?? null),
+        externalIssueId: mismatch ? null : (form.externalIssueId ?? null),
         description: form.description || null,
         timeStart: new Date(form.timeStart).toISOString(),
         timeEnd: new Date(form.timeEnd).toISOString(),
@@ -272,8 +233,8 @@ async function onSubmit() {
     } else {
       const payload: CreateTimeEntryRequest = {
         projectId: form.projectId ?? null,
-        issueId: form.externalIssueId ? null : (form.issueId ?? null),
-        externalIssueId: form.externalIssueId ?? null,
+        issueId: mismatch ? null : form.externalIssueId ? null : (form.issueId ?? null),
+        externalIssueId: mismatch ? null : (form.externalIssueId ?? null),
         description: form.description || null,
         timeStart: new Date(form.timeStart).toISOString(),
         timeEnd: new Date(form.timeEnd).toISOString(),
@@ -290,11 +251,23 @@ async function onSubmit() {
       })
       return
     }
-    toast.add({
-      title: isEdit.value ? 'Entry updated' : 'Entry created',
-      color: 'success',
-      icon: 'i-lucide-check'
-    })
+
+    if (mismatch) {
+      toast.add({
+        title: 'Project mismatch',
+        description:
+          'The selected issue does not belong to the selected project. The entry was saved, but the issue was cleared.',
+        color: 'warning',
+        icon: 'i-lucide-alert-triangle'
+      })
+    } else {
+      toast.add({
+        title: isEdit.value ? 'Entry updated' : 'Entry created',
+        color: 'success',
+        icon: 'i-lucide-check'
+      })
+    }
+
     emit('saved', saved)
     emit('update:open', false)
   } finally {
@@ -355,31 +328,29 @@ async function onDelete() {
             />
           </UFormField>
 
-          <div class="grid grid-cols-2 gap-4">
-            <UFormField label="Project" name="projectId">
-              <USelectMenu
-                v-model="form.projectId"
-                :items="projects"
-                value-key="id"
-                label-key="name"
-                placeholder="Select project"
-                class="w-full"
-              />
-            </UFormField>
+          <UFormField label="Project" name="projectId">
+            <USelectMenu
+              v-model="form.projectId"
+              :items="projects"
+              value-key="id"
+              label-key="name"
+              placeholder="Select project"
+              class="w-full"
+            />
+          </UFormField>
 
-            <UFormField label="Issue" name="issueId">
-              <AppComboboxInput
-                v-model="form.issueTitle"
-                :options="issueOptions"
-                :loading="isSearchingIssues"
-                placeholder="Search issue…"
-                :allow-custom="false"
-                class="w-full"
-                @query-change="(q) => (issueQuery = q)"
-                @update:model-value="onIssueSelected"
-              />
-            </UFormField>
-          </div>
+          <UFormField label="Issue" name="issueId">
+            <AppComboboxInput
+              v-model="form.issueTitle"
+              :options="issueOptions"
+              :loading="isSearchingIssues"
+              placeholder="Search issue…"
+              :allow-custom="false"
+              class="w-full"
+              @query-change="(q) => (issueQuery = q)"
+              @update:model-value="onIssueSelected"
+            />
+          </UFormField>
 
           <!-- Warning message if project and issue don't align -->
           <div

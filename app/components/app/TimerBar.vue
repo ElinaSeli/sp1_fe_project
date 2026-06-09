@@ -48,6 +48,7 @@ const activeIssueName = computed({
     if (!name) {
       timerStore.draftEntry.externalIssueId = null
       timerStore.draftEntry.issueTitle = ''
+      timerStore.draftEntry.issueProjectName = ''
       selectedIssueProjectName.value = ''
       return
     }
@@ -55,19 +56,8 @@ const activeIssueName = computed({
     if (match) {
       timerStore.draftEntry.externalIssueId = String(match.external_id)
       timerStore.draftEntry.issueTitle = match.issue_title
+      timerStore.draftEntry.issueProjectName = match.project_name
       selectedIssueProjectName.value = match.project_name
-
-      const proj = projects.value.find((p) => p.name === match.project_name)
-      if (proj) {
-        timerStore.draftEntry.projectId = proj.id
-      } else {
-        toast.add({
-          title: 'Project mismatch',
-          description: `This issue belongs to project "${match.project_name}", which is not in this workspace.`,
-          color: 'warning',
-          icon: 'i-lucide-alert-triangle'
-        })
-      }
     }
   }
 })
@@ -84,37 +74,6 @@ watch(
     }
   },
   { immediate: true }
-)
-
-watch(
-  () => timerStore.draftEntry.projectId,
-  (newProjId, oldProjId) => {
-    if (newProjId !== oldProjId) {
-      if (!newProjId) {
-        timerStore.draftEntry.externalIssueId = null
-        timerStore.draftEntry.issueTitle = ''
-        selectedIssueProjectName.value = ''
-        return
-      }
-      const currentProj = projects.value.find((p) => p.id === newProjId)
-      if (
-        currentProj &&
-        selectedIssueProjectName.value &&
-        currentProj.name !== selectedIssueProjectName.value
-      ) {
-        timerStore.draftEntry.externalIssueId = null
-        timerStore.draftEntry.issueTitle = ''
-        selectedIssueProjectName.value = ''
-
-        toast.add({
-          title: 'Issue cleared',
-          description: 'The selected issue does not belong to the new project.',
-          color: 'warning',
-          icon: 'i-lucide-info'
-        })
-      }
-    }
-  }
 )
 
 const allTags = computed(() => (Array.isArray(tagsStore.tags) ? tagsStore.tags : []))
