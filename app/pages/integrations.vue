@@ -320,7 +320,13 @@ watch(activeWorkspaceId, (id) => {
               <UButton type="button" color="neutral" variant="ghost" @click="closeModal">
                 Cancel
               </UButton>
-              <UButton type="submit" color="primary" :loading="isLoading" :disabled="!canSubmit">
+              <UButton
+                type="button"
+                color="primary"
+                :loading="isLoading"
+                :disabled="!canSubmit"
+                @click="onSubmit"
+              >
                 {{ isEditing ? 'Save Changes' : 'Connect' }}
               </UButton>
             </div>

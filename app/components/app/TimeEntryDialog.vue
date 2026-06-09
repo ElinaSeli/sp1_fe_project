@@ -23,11 +23,36 @@ const confirm = useConfirm()
 
 const isEdit = computed(() => Boolean(props.entry))
 const isLoading = ref(false)
+const isInitializing = ref(false)
 
 const projects = computed(() => projectsStore.projects)
 const filteredTags = computed(() => {
   const all = tagsStore.tags || []
-  return form.projectId ? all.filter((t) => t.projectId === form.projectId) : all
+  let filtered = all
+  if (form.projectId) {
+    filtered = all.filter((t) => t.projectId === form.projectId)
+  }
+  const uniqueNames = new Set<string>()
+  const result: typeof all = []
+
+  // Safeguard: Ensure currently selected tags are always present in the items array
+  if (form.tagIds && form.tagIds.length > 0) {
+    for (const id of form.tagIds) {
+      const selectedTag = all.find((t) => t.id === id)
+      if (selectedTag) {
+        result.push(selectedTag)
+        uniqueNames.add(selectedTag.name)
+      }
+    }
+  }
+
+  for (const tag of filtered) {
+    if (!uniqueNames.has(tag.name)) {
+      uniqueNames.add(tag.name)
+      result.push(tag)
+    }
+  }
+  return result
 })
 
 // Live Redmine issue search
@@ -73,10 +98,25 @@ const form = reactive({
 
 const selectedIssueProjectName = ref('')
 
+const selectedTagId = computed({
+  get: () => form.tagIds?.[0] || undefined,
+  set: (val: string | undefined) => {
+    form.tagIds = val ? [val] : []
+  }
+})
+
 watch(
   () => props.open,
   (open) => {
-    if (!open) return
+    isInitializing.value = true
+    if (!open) {
+      form.projectId = undefined
+      form.issueId = undefined
+      form.tagIds = []
+      form.description = ''
+      isInitializing.value = false
+      return
+    }
     if (props.entry) {
       form.description = props.entry.description ?? ''
       form.projectId = props.entry.projectId ?? undefined
@@ -150,13 +190,61 @@ watch(
         toast.add({
           title: 'Issue cleared',
           description: 'The selected issue does not belong to the new project.',
-          color: 'neutral',
+          color: 'warning',
           icon: 'i-lucide-info'
         })
       }
     }
+    isInitializing.value = false
   }
 )
+
+watch(
+  () => form.projectId,
+  (newVal, oldVal) => {
+    // Only swap dependent fields if the project is actually changing from one value to another
+    if (!isInitializing.value && newVal !== oldVal) {
+      // Swap Tag ID
+      if (form.tagIds && form.tagIds.length > 0) {
+        const oldId = form.tagIds[0]
+        const oldTag = (tagsStore.tags || []).find((t) => t.id === oldId)
+        if (oldTag) {
+          const newTag = (tagsStore.tags || []).find(
+            (t) => t.name === oldTag.name && t.projectId === newVal
+          )
+          form.tagIds = newTag ? [newTag.id] : []
+        } else {
+          form.tagIds = []
+        }
+      }
+    }
+  },
+  { flush: 'sync' }
+)
+
+function onIssueSelected(title: string) {
+  const match = issueResults.value.find((r) => r.issue_title === title)
+  if (match) {
+    form.externalIssueId = String(match.external_id)
+    form.issueTitle = match.issue_title
+    selectedIssueProjectName.value = match.project_name
+    const proj = projects.value.find((p) => p.name === match.project_name)
+    if (proj) {
+      form.projectId = proj.id
+    } else {
+      toast.add({
+        title: 'Project mismatch',
+        description: `This issue belongs to project "${match.project_name}", which is not in this workspace.`,
+        color: 'warning',
+        icon: 'i-lucide-alert-triangle'
+      })
+    }
+  } else {
+    form.externalIssueId = undefined
+    form.issueTitle = ''
+    selectedIssueProjectName.value = ''
+  }
+}
 
 const timeStartMs = computed(() => new Date(form.timeStart).getTime())
 const timeEndMs = computed(() => new Date(form.timeEnd).getTime())
@@ -276,7 +364,6 @@ async function onDelete() {
                 label-key="name"
                 placeholder="Select project"
                 class="w-full"
-                @update:model-value="form.issueId = undefined"
               />
             </UFormField>
 
@@ -289,36 +376,34 @@ async function onDelete() {
                 :allow-custom="false"
                 class="w-full"
                 @query-change="(q) => (issueQuery = q)"
-                @update:model-value="
-                  (title) => {
-                    const match = issueResults.find((r) => r.issue_title === title)
-                    if (match) {
-                      form.externalIssueId = String(match.external_id)
-                      form.issueTitle = match.issue_title
-                      selectedIssueProjectName = match.project_name
-                      const proj = projects.find((p) => p.name === match.project_name)
-                      if (proj) {
-                        form.projectId = proj.id
-                      }
-                    } else {
-                      form.externalIssueId = undefined
-                      form.issueTitle = ''
-                      selectedIssueProjectName = ''
-                    }
-                  }
-                "
+                @update:model-value="onIssueSelected"
               />
             </UFormField>
           </div>
 
-          <UFormField label="Tags" name="tagIds">
+          <!-- Warning message if project and issue don't align -->
+          <div
+            v-if="
+              selectedIssueProjectName &&
+              form.projectId &&
+              projects.find((p) => p.id === form.projectId)?.name !== selectedIssueProjectName
+            "
+            class="text-xs text-warning-500 dark:text-warning-400 mt-1 flex items-center gap-1.5 font-medium bg-warning-50 dark:bg-warning-950/20 p-2.5 rounded-lg border border-warning-200 dark:border-warning-900/50"
+          >
+            <UIcon name="i-lucide-alert-triangle" class="size-4 shrink-0 text-warning-500" />
+            <span
+              >This task belongs to project "{{ selectedIssueProjectName }}", but you have selected
+              project "{{ projects.find((p) => p.id === form.projectId)?.name }}".</span
+            >
+          </div>
+
+          <UFormField label="Tag" name="tagIds">
             <USelectMenu
-              v-model="form.tagIds"
+              v-model="selectedTagId"
               :items="filteredTags"
               value-key="id"
               label-key="name"
-              placeholder="Select tags"
-              multiple
+              placeholder="Select tag"
               class="w-full"
             />
           </UFormField>
@@ -366,7 +451,13 @@ async function onDelete() {
             >
               Cancel
             </UButton>
-            <UButton type="submit" color="primary" :loading="isLoading" :disabled="!canSubmit">
+            <UButton
+              type="button"
+              color="primary"
+              :loading="isLoading"
+              :disabled="!canSubmit"
+              @click="onSubmit"
+            >
               {{ isEdit ? 'Save Changes' : 'Create Entry' }}
             </UButton>
           </div>

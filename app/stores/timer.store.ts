@@ -28,6 +28,49 @@ export const useTimerStore = defineStore(
       tagIds: [] as string[]
     })
 
+    const isSwappingDisabled = ref(false)
+
+    watch(
+      () => draftEntry.value.projectId,
+      (newVal, oldVal) => {
+        if (!isSwappingDisabled.value && newVal !== oldVal) {
+          const issuesStore = useIssuesStore()
+          const tagsStore = useTagsStore()
+
+          // Swap Issue ID
+          if (draftEntry.value.issueId) {
+            const oldIssue = (issuesStore.issues || []).find(
+              (i) => i.id === draftEntry.value.issueId
+            )
+            if (oldIssue) {
+              const newIssue = (issuesStore.issues || []).find(
+                (i) => i.name === oldIssue.name && i.projectId === newVal
+              )
+              draftEntry.value.issueId = newIssue ? newIssue.id : null
+            } else {
+              draftEntry.value.issueId = null
+            }
+          }
+
+          // Swap Tag IDs
+          if (draftEntry.value.tagIds && draftEntry.value.tagIds.length > 0) {
+            const newTagIds: string[] = []
+            for (const oldId of draftEntry.value.tagIds) {
+              const oldTag = (tagsStore.tags || []).find((t) => t.id === oldId)
+              if (oldTag) {
+                const newTag = (tagsStore.tags || []).find(
+                  (t) => t.name === oldTag.name && t.projectId === newVal
+                )
+                if (newTag) newTagIds.push(newTag.id)
+              }
+            }
+            draftEntry.value.tagIds = newTagIds
+          }
+        }
+      },
+      { flush: 'sync' }
+    )
+
     const entries = ref<TimeEntryViewModel[]>([])
     const rawEntries = ref<TimeEntry[]>([])
 
@@ -83,10 +126,13 @@ export const useTimerStore = defineStore(
         isRunning.value = true
         activeEntryId.value = response.data.id
         startTimestamp.value = new Date(response.data.timeStart).getTime()
+
+        isSwappingDisabled.value = true
         draftEntry.value.description = response.data.description || ''
         draftEntry.value.projectId = response.data.projectId
         draftEntry.value.issueId = response.data.issueId || null
         draftEntry.value.tagIds = response.data.tagIds || []
+        isSwappingDisabled.value = false
       } else {
         isRunning.value = false
         startTimestamp.value = null
@@ -167,7 +213,6 @@ export const useTimerStore = defineStore(
           // Capture draft values before resetDraft() clears them
           const savedIssueTitle = draftEntry.value.issueTitle
           const savedTagIds = [...draftEntry.value.tagIds]
-
           entries.value.unshift({
             id: entry.id,
             description: entry.description || '',
@@ -283,10 +328,12 @@ export const useTimerStore = defineStore(
         await stopTimer()
       }
 
+      isSwappingDisabled.value = true
       draftEntry.value.description = entry.description || ''
       draftEntry.value.projectId = entry.projectId
       draftEntry.value.issueId = entry.issueId || null
       draftEntry.value.tagIds = [...(entry.tagIds || [])]
+      isSwappingDisabled.value = false
 
       try {
         await startTimer()
@@ -298,6 +345,7 @@ export const useTimerStore = defineStore(
     }
 
     function resetDraft() {
+      isSwappingDisabled.value = true
       draftEntry.value = {
         description: '',
         projectId: null,
@@ -306,6 +354,7 @@ export const useTimerStore = defineStore(
         issueTitle: '',
         tagIds: []
       }
+      isSwappingDisabled.value = false
     }
 
     return {

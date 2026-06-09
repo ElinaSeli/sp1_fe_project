@@ -60,6 +60,13 @@ const activeIssueName = computed({
       const proj = projects.value.find((p) => p.name === match.project_name)
       if (proj) {
         timerStore.draftEntry.projectId = proj.id
+      } else {
+        toast.add({
+          title: 'Project mismatch',
+          description: `This issue belongs to project "${match.project_name}", which is not in this workspace.`,
+          color: 'warning',
+          icon: 'i-lucide-alert-triangle'
+        })
       }
     }
   }
@@ -102,7 +109,7 @@ watch(
         toast.add({
           title: 'Issue cleared',
           description: 'The selected issue does not belong to the new project.',
-          color: 'neutral',
+          color: 'warning',
           icon: 'i-lucide-info'
         })
       }
@@ -111,18 +118,41 @@ watch(
 )
 
 const allTags = computed(() => (Array.isArray(tagsStore.tags) ? tagsStore.tags : []))
-const availableTags = computed(() => allTags.value.map((t) => t.name))
-const selectedTagNames = computed({
+const availableTags = computed(() => {
+  return Array.from(new Set(allTags.value.map((t) => t.name)))
+})
+
+const selectedTagName = computed({
   get: () => {
     const currentIds = timerStore.draftEntry.tagIds || []
-    return currentIds
-      .map((id) => allTags.value.find((t) => t.id === id)?.name)
-      .filter(Boolean) as string[]
+    if (currentIds.length === 0) return ''
+    const id = currentIds[0]
+    return allTags.value.find((t) => t.id === id)?.name || ''
   },
-  set: (names: string[]) => {
-    timerStore.draftEntry.tagIds = names
-      .map((n) => allTags.value.find((t) => t.name === n)?.id)
-      .filter(Boolean) as string[]
+  set: (name: string) => {
+    if (!name) {
+      timerStore.draftEntry.tagIds = []
+      return
+    }
+
+    let t = null
+    if (timerStore.draftEntry.projectId) {
+      t = allTags.value.find(
+        (x) => x.name === name && x.projectId === timerStore.draftEntry.projectId
+      )
+    }
+    if (!t) {
+      t = allTags.value.find((x) => x.name === name)
+    }
+
+    if (t?.id) {
+      timerStore.draftEntry.tagIds = [t.id]
+      if (!timerStore.draftEntry.projectId && t.projectId) {
+        timerStore.draftEntry.projectId = t.projectId
+      }
+    } else {
+      timerStore.draftEntry.tagIds = []
+    }
   }
 })
 
@@ -265,13 +295,31 @@ onUnmounted(() => {
         <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
 
         <AppComboboxInput
-          v-model="selectedTagNames"
+          v-model="selectedTagName"
           :options="availableTags"
-          placeholder="Tags"
-          :multiple="true"
+          placeholder="Tag"
+          :multiple="false"
           :dark="true"
           class="flex-1 min-w-[100px] md:w-32 lg:w-40"
         />
+      </div>
+
+      <!-- Warning message if project and issue don't align -->
+      <div
+        v-if="
+          selectedIssueProjectName &&
+          timerStore.draftEntry.projectId &&
+          projects.find((p) => p.id === timerStore.draftEntry.projectId)?.name !==
+            selectedIssueProjectName
+        "
+        class="w-full text-xs text-warning-500 dark:text-warning-400 mt-1 flex items-center gap-1.5 px-1 font-medium"
+      >
+        <UIcon name="i-lucide-alert-triangle" class="size-3.5 shrink-0" />
+        <span
+          >This task belongs to project "{{ selectedIssueProjectName }}", but active project is "{{
+            projects.find((p) => p.id === timerStore.draftEntry.projectId)?.name
+          }}".</span
+        >
       </div>
     </div>
 
