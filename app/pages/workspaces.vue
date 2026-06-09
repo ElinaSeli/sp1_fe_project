@@ -120,7 +120,18 @@ function formatDate(iso: string | null | undefined): string {
   })
 }
 
-onMounted(() => workspacesStore.fetchWorkspaces())
+const onCreateNew = () => {
+  isCreateOpen.value = true
+}
+
+onMounted(() => {
+  window.addEventListener('app:createNew', onCreateNew)
+  workspacesStore.fetchWorkspaces()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('app:createNew', onCreateNew)
+})
 </script>
 
 <template>

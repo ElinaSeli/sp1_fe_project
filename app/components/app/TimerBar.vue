@@ -184,13 +184,21 @@ const stopTracking = async () => {
   }
 }
 
+const taskInput = ref<{ focus: () => void } | null>(null)
+
+const focusTaskField = () => {
+  taskInput.value?.focus()
+}
+
 onMounted(() => {
   workspacesStore.fetchWorkspaces()
   timerStore.fetchActiveTimer()
+  window.addEventListener('app:focusTaskField', focusTaskField)
 })
 
 onUnmounted(() => {
   if (tickerInterval) clearInterval(tickerInterval)
+  window.removeEventListener('app:focusTaskField', focusTaskField)
 })
 </script>
 
@@ -235,6 +243,7 @@ onUnmounted(() => {
       <!-- Group 2: Task + Tags -->
       <div class="flex w-full md:w-auto items-center gap-1">
         <AppComboboxInput
+          ref="taskInput"
           v-model="activeIssueName"
           :options="issues"
           placeholder="Task"

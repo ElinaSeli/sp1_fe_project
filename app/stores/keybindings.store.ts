@@ -101,7 +101,14 @@ export const useKeybindingsStore = defineStore(
     }
 
     function resetToDefaults() {
-      bindings.value = structuredClone(DEFAULT_BINDINGS)
+      bindings.value = Object.keys(DEFAULT_BINDINGS).reduce(
+        (acc, key) => {
+          const k = key as KeybindingActionId
+          acc[k] = { ...DEFAULT_BINDINGS[k] }
+          return acc
+        },
+        {} as Record<KeybindingActionId, KeybindingBinding>
+      )
     }
 
     return {
