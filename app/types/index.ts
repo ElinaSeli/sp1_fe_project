@@ -54,13 +54,15 @@ export interface AuthResponse {
 export interface Workspace {
   id: string
   name: string
-  description?: string | null
   createdAt?: string | null
 }
 
 export interface CreateWorkspaceRequest {
   name: string
-  description?: string | null
+}
+
+export interface UpdateWorkspaceRequest {
+  name: string
 }
 
 // ---------------------------------------------------------------------------

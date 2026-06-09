@@ -8,6 +8,7 @@
 import type {
   Workspace,
   CreateWorkspaceRequest,
+  UpdateWorkspaceRequest,
   MembershipResponse,
   ServiceResponse
 } from '~/types'
@@ -36,6 +37,11 @@ export const workspacesService = {
       method: 'POST',
       body: payload
     })
+  },
+
+  async update(id: string, payload: UpdateWorkspaceRequest): Promise<ServiceResponse<Workspace>> {
+    const { request } = useApiClient()
+    return request<Workspace>(`/api/workspaces/${id}`, { method: 'PATCH', body: payload })
   },
 
   async delete(id: string): Promise<ServiceResponse<null>> {
