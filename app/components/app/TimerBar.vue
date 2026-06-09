@@ -40,21 +40,75 @@ const {
 const issueOptions = computed(() => issueResults.value.map((r) => r.issue_title))
 
 // The currently selected issue label (for display in the combobox)
+const selectedIssueProjectName = ref('')
+
 const activeIssueName = computed({
   get: () => timerStore.draftEntry.issueTitle ?? '',
   set: (name: string) => {
     if (!name) {
       timerStore.draftEntry.externalIssueId = null
       timerStore.draftEntry.issueTitle = ''
+      selectedIssueProjectName.value = ''
       return
     }
     const match = issueResults.value.find((r) => r.issue_title === name)
     if (match) {
       timerStore.draftEntry.externalIssueId = String(match.external_id)
       timerStore.draftEntry.issueTitle = match.issue_title
+      selectedIssueProjectName.value = match.project_name
+
+      const proj = projects.value.find((p) => p.name === match.project_name)
+      if (proj) {
+        timerStore.draftEntry.projectId = proj.id
+      }
     }
   }
 })
+
+// Initialize selectedIssueProjectName when projects or draftEntry project loads
+watch(
+  [() => timerStore.draftEntry.projectId, projects],
+  ([projId, projs]) => {
+    if (projId && projs.length > 0 && !selectedIssueProjectName.value) {
+      const proj = projs.find((p) => p.id === projId)
+      if (proj) {
+        selectedIssueProjectName.value = proj.name
+      }
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => timerStore.draftEntry.projectId,
+  (newProjId, oldProjId) => {
+    if (newProjId !== oldProjId) {
+      if (!newProjId) {
+        timerStore.draftEntry.externalIssueId = null
+        timerStore.draftEntry.issueTitle = ''
+        selectedIssueProjectName.value = ''
+        return
+      }
+      const currentProj = projects.value.find((p) => p.id === newProjId)
+      if (
+        currentProj &&
+        selectedIssueProjectName.value &&
+        currentProj.name !== selectedIssueProjectName.value
+      ) {
+        timerStore.draftEntry.externalIssueId = null
+        timerStore.draftEntry.issueTitle = ''
+        selectedIssueProjectName.value = ''
+
+        toast.add({
+          title: 'Issue cleared',
+          description: 'The selected issue does not belong to the new project.',
+          color: 'neutral',
+          icon: 'i-lucide-info'
+        })
+      }
+    }
+  }
+)
 
 const allTags = computed(() => (Array.isArray(tagsStore.tags) ? tagsStore.tags : []))
 const availableTags = computed(() => allTags.value.map((t) => t.name))

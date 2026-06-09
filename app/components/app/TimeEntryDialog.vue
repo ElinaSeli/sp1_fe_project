@@ -71,6 +71,8 @@ const form = reactive({
   timeEnd: defaultEnd()
 })
 
+const selectedIssueProjectName = ref('')
+
 watch(
   () => props.open,
   (open) => {
@@ -84,6 +86,14 @@ watch(
       form.tagIds = [...(props.entry.tagIds ?? [])]
       form.timeStart = toLocalInput(props.entry.timeStart)
       form.timeEnd = props.entry.timeEnd ? toLocalInput(props.entry.timeEnd) : defaultEnd()
+
+      const entry = props.entry
+      if (entry && entry.projectId) {
+        const proj = projects.value.find((p) => p.id === entry.projectId)
+        selectedIssueProjectName.value = proj ? proj.name : ''
+      } else {
+        selectedIssueProjectName.value = ''
+      }
     } else {
       form.description = ''
       form.projectId = undefined
@@ -97,6 +107,53 @@ watch(
       form.timeEnd = props.initialTimeEnd
         ? toLocalInput(props.initialTimeEnd.toISOString())
         : defaultEnd()
+      selectedIssueProjectName.value = ''
+    }
+  }
+)
+
+watch(
+  [() => form.projectId, projects],
+  ([projId, projs]) => {
+    if (projId && projs.length > 0 && !selectedIssueProjectName.value) {
+      const proj = projs.find((p) => p.id === projId)
+      if (proj) {
+        selectedIssueProjectName.value = proj.name
+      }
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => form.projectId,
+  (newProjId, oldProjId) => {
+    if (newProjId !== oldProjId) {
+      if (!newProjId) {
+        form.issueId = undefined
+        form.externalIssueId = undefined
+        form.issueTitle = ''
+        selectedIssueProjectName.value = ''
+        return
+      }
+      const currentProj = projects.value.find((p) => p.id === newProjId)
+      if (
+        currentProj &&
+        selectedIssueProjectName.value &&
+        currentProj.name !== selectedIssueProjectName.value
+      ) {
+        form.issueId = undefined
+        form.externalIssueId = undefined
+        form.issueTitle = ''
+        selectedIssueProjectName.value = ''
+
+        toast.add({
+          title: 'Issue cleared',
+          description: 'The selected issue does not belong to the new project.',
+          color: 'neutral',
+          icon: 'i-lucide-info'
+        })
+      }
     }
   }
 )
@@ -238,9 +295,15 @@ async function onDelete() {
                     if (match) {
                       form.externalIssueId = String(match.external_id)
                       form.issueTitle = match.issue_title
+                      selectedIssueProjectName = match.project_name
+                      const proj = projects.find((p) => p.name === match.project_name)
+                      if (proj) {
+                        form.projectId = proj.id
+                      }
                     } else {
                       form.externalIssueId = undefined
                       form.issueTitle = ''
+                      selectedIssueProjectName = ''
                     }
                   }
                 "

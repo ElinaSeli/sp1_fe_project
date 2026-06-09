@@ -51,7 +51,7 @@ const ACTION_HANDLERS: Record<KeybindingActionId, () => void> = {
   stopTimer: () => console.warn('[keybinding] stopTimer fired — TODO'),
   resumeLast: () => console.warn('[keybinding] resumeLast fired — TODO'),
   goToDashboard: () => {
-    navigateTo('/')
+    navigateTo('/time-entries')
   },
   focusTaskField: () => window.dispatchEvent(new CustomEvent('app:focusTaskField')),
   focusDescField: () => document.querySelector<HTMLElement>('[data-focus="desc-field"]')?.focus(),

@@ -524,7 +524,7 @@ defineExpose({ focus: focusInput })
   left: 0;
   min-width: 200px;
   width: max-content;
-  max-width: 360px;
+  max-width: min(90vw, 500px);
   max-height: 260px;
   overflow-y: auto;
   border-radius: 10px;

@@ -12,7 +12,7 @@ const colorMode = useColorMode()
 
 const navLinks = [
   { to: '/time-entries', icon: 'i-lucide-list', label: 'Time Entries' },
-  { to: '/', icon: 'i-lucide-calendar', label: 'Calendar' },
+  { to: '/calendar', icon: 'i-lucide-calendar', label: 'Calendar' },
   { to: '/projects', icon: 'i-lucide-folder', label: 'Projects' },
   { to: '/tags', icon: 'i-lucide-tag', label: 'Tags' },
   { to: '/reports', icon: 'i-lucide-bar-chart-3', label: 'Reports' },
