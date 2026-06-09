@@ -51,12 +51,6 @@ export const KEYBINDING_ACTIONS: KeybindingAction[] = [
     category: 'timeEntry'
   },
   {
-    id: 'newTimeEntry',
-    label: 'New time entry',
-    description: 'Open the form to add a manual time entry',
-    category: 'timeEntry'
-  },
-  {
     id: 'createNew',
     label: 'Create new',
     // TODO: maps to whichever "create new" button is visible in the current context
@@ -81,7 +75,6 @@ export const DEFAULT_BINDINGS: Record<KeybindingActionId, KeybindingBinding> = {
   focusTaskField: { key: 'Alt+T', enabled: true },
   focusDescField: { key: '/', enabled: true },
   editLastEntry: { key: 'Alt+L', enabled: true },
-  newTimeEntry: { key: 'Alt+N', enabled: true },
   createNew: { key: 'Alt+C', enabled: true },
   toggleSidebar: { key: '[', enabled: true }
 }

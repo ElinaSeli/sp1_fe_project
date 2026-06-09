@@ -133,7 +133,6 @@ const ACTION_HANDLERS: Record<KeybindingActionId, () => void> = {
   focusTaskField: () => window.dispatchEvent(new CustomEvent('app:focusTaskField')),
   focusDescField: () => document.querySelector<HTMLElement>('[data-focus="desc-field"]')?.focus(),
   editLastEntry: () => window.dispatchEvent(new CustomEvent('app:editLastTimeEntry')),
-  newTimeEntry: () => window.dispatchEvent(new CustomEvent('app:openNewTimeEntry')),
   createNew: () => window.dispatchEvent(new CustomEvent('app:createNew')),
   toggleSidebar: () => window.dispatchEvent(new CustomEvent('app:toggleSidebar'))
 }

@@ -223,7 +223,6 @@ export type KeybindingActionId =
   | 'focusTaskField'
   | 'focusDescField'
   | 'editLastEntry'
-  | 'newTimeEntry'
   | 'createNew'
   | 'toggleSidebar'
 
