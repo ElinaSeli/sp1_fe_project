@@ -70,12 +70,7 @@ const displayParts = computed(() => (props.modelValue ? props.modelValue.split('
         <span class="text-xs animate-pulse">Press a key…</span>
       </template>
       <template v-else-if="displayParts.length">
-        <UKbd
-          v-for="(part, i) in displayParts"
-          :key="i"
-          size="sm"
-          :value="part"
-        />
+        <UKbd v-for="(part, i) in displayParts" :key="i" size="sm" :value="part" />
       </template>
       <template v-else>
         <span class="text-gray-400 dark:text-gray-500 text-xs">—</span>

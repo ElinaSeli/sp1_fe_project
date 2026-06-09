@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { authService } from '~/services'
-import { validateEmail, validatePassword, validateConfirmPassword } from '~/composables/usePasswordValidation'
+import {
+  validateEmail,
+  validatePassword,
+  validateConfirmPassword
+} from '~/composables/usePasswordValidation'
 
 definePageMeta({
   layout: 'auth'
@@ -34,7 +38,10 @@ function validateFields(): boolean {
   fieldErrors.value.username = form.value.username.trim() ? undefined : 'Username is required'
   fieldErrors.value.email = validateEmail(form.value.email)
   fieldErrors.value.password = validatePassword(form.value.password)
-  fieldErrors.value.confirmPassword = validateConfirmPassword(form.value.password, form.value.confirmPassword)
+  fieldErrors.value.confirmPassword = validateConfirmPassword(
+    form.value.password,
+    form.value.confirmPassword
+  )
   return Object.values(fieldErrors.value).every((e) => !e)
 }
 

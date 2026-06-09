@@ -63,7 +63,9 @@ const grouped = computed(() =>
           >
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ action.label }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ action.description }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {{ action.description }}
+              </p>
             </div>
 
             <SettingsKeybindingInput

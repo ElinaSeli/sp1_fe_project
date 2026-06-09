@@ -44,17 +44,37 @@ const activeIssueName = computed({
 
 const allTags = computed(() => (Array.isArray(tagsStore.tags) ? tagsStore.tags : []))
 const availableTags = computed(() => allTags.value.map((t) => t.name))
-const selectedTagNames = computed({
+const selectedTagName = computed({
   get: () => {
     const currentIds = timerStore.draftEntry.tagIds || []
-    return currentIds
-      .map((id) => allTags.value.find((t) => t.id === id)?.name)
-      .filter(Boolean) as string[]
+    if (currentIds.length === 0) return ''
+    const id = currentIds[0]
+    return allTags.value.find((t) => t.id === id)?.name || ''
   },
-  set: (names: string[]) => {
-    timerStore.draftEntry.tagIds = names
-      .map((n) => allTags.value.find((t) => t.name === n)?.id)
-      .filter(Boolean) as string[]
+  set: (name: string) => {
+    if (!name) {
+      timerStore.draftEntry.tagIds = []
+      return
+    }
+
+    let t = null
+    if (timerStore.draftEntry.projectId) {
+      t = allTags.value.find(
+        (x) => x.name === name && x.projectId === timerStore.draftEntry.projectId
+      )
+    }
+    if (!t) {
+      t = allTags.value.find((x) => x.name === name)
+    }
+
+    if (t?.id) {
+      timerStore.draftEntry.tagIds = [t.id]
+      if (!timerStore.draftEntry.projectId && t.projectId) {
+        timerStore.draftEntry.projectId = t.projectId
+      }
+    } else {
+      timerStore.draftEntry.tagIds = []
+    }
   }
 })
 
@@ -200,10 +220,10 @@ onUnmounted(() => {
         <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
 
         <AppComboboxInput
-          v-model="selectedTagNames"
+          v-model="selectedTagName"
           :options="availableTags"
-          placeholder="Tags"
-          :multiple="true"
+          placeholder="Tag"
+          :multiple="false"
           :dark="true"
           class="flex-1 min-w-[100px] md:w-32 lg:w-40"
         />

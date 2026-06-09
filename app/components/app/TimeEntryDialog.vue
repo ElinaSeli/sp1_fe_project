@@ -83,6 +83,13 @@ watch(
   }
 )
 
+const selectedTagId = computed({
+  get: () => form.tagIds?.[0] || undefined,
+  set: (val: string | undefined) => {
+    form.tagIds = val ? [val] : []
+  }
+})
+
 const timeStartMs = computed(() => new Date(form.timeStart).getTime())
 const timeEndMs = computed(() => new Date(form.timeEnd).getTime())
 const timeValid = computed(
@@ -216,14 +223,13 @@ async function onDelete() {
             </UFormField>
           </div>
 
-          <UFormField label="Tags" name="tagIds">
+          <UFormField label="Tag" name="tagIds">
             <USelectMenu
-              v-model="form.tagIds"
+              v-model="selectedTagId"
               :items="tags"
               value-key="id"
               label-key="name"
-              placeholder="Select tags"
-              multiple
+              placeholder="Select tag"
               class="w-full"
             />
           </UFormField>
