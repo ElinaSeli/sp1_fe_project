@@ -48,7 +48,7 @@ const editState = reactive<CreateProjectRequest>({ name: '', color: '#10b981' })
 function openEdit(project: Project) {
   editingProject.value = project
   editState.name = project.name
-  editState.color = project.color ?? '#10b981'
+  editState.color = project.color ?? null
   isEditOpen.value = true
 }
 
@@ -59,7 +59,7 @@ async function onEditSubmit() {
 
   const payload = {
     name: isReadOnly ? editingProject.value.name : editState.name,
-    color: editState.color ?? undefined
+    color: editState.color
   }
 
   const result = await projectsStore.updateProject(editingProject.value.id, payload)
@@ -294,13 +294,35 @@ watch(activeWorkspaceId, (id) => {
 
             <UFormField label="Color" name="color">
               <div class="flex items-center gap-3">
-                <input
-                  v-model="editState.color"
-                  type="color"
-                  class="w-10 h-10 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent p-0.5"
-                  :autofocus="editingProject?.isExternal || editingProject?.isSystem"
-                />
-                <span class="text-sm font-mono text-gray-500">{{ editState.color }}</span>
+                <template v-if="editState.color !== null && editState.color !== undefined">
+                  <input
+                    v-model="editState.color"
+                    type="color"
+                    class="w-10 h-10 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent p-0.5"
+                    :autofocus="editingProject?.isExternal || editingProject?.isSystem"
+                  />
+                  <span class="text-sm font-mono text-gray-500">{{ editState.color }}</span>
+                  <UButton
+                    type="button"
+                    icon="i-lucide-x"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    title="Remove color"
+                    @click="editState.color = null"
+                  />
+                </template>
+                <template v-else>
+                  <button
+                    type="button"
+                    class="w-10 h-10 rounded border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 hover:border-primary-400 dark:hover:border-primary-500 hover:text-primary-500 transition-colors cursor-pointer"
+                    title="Set color"
+                    @click="editState.color = '#10b981'"
+                  >
+                    <UIcon name="i-lucide-plus" class="text-base" />
+                  </button>
+                  <span class="text-sm text-gray-400 italic">No color</span>
+                </template>
               </div>
             </UFormField>
 
