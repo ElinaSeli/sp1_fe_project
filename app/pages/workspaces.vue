@@ -7,6 +7,7 @@ const workspacesStore = useWorkspacesStore()
 const { workspaces, activeWorkspaceId, isLoading, error } = storeToRefs(workspacesStore)
 const toast = useToast()
 const confirm = useConfirm()
+const { formatDateShort: formatDate } = useDateFormat()
 
 // --- Create ---
 const isCreateOpen = ref(false)
@@ -108,15 +109,6 @@ function switchWorkspace(id: string) {
     title: `Switched to "${ws?.name}"`,
     color: 'success',
     icon: 'i-lucide-layout-dashboard'
-  })
-}
-
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
   })
 }
 
