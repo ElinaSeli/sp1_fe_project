@@ -9,8 +9,9 @@ const mockTags = [
 ]
 
 const mockProjects = [
-  { id: 'proj-1', name: 'Timer2Ticket', externalId: 'ext-proj-1' },
-  { id: 'proj-2', name: 'SP2-EDU-2025', externalId: 'ext-proj-2' }
+  { id: 'proj-1', name: 'Timer2Ticket', externalId: 'ext-proj-1', isSystem: false },
+  { id: 'proj-2', name: 'SP2-EDU-2025', externalId: 'ext-proj-2', isSystem: false },
+  { id: 'proj-no-project', name: 'No Project', externalId: null, isSystem: true }
 ]
 
 describe('Tag Swapping and Mismatch Validation Logic', () => {
@@ -162,5 +163,64 @@ describe('Tag Swapping and Mismatch Validation Logic', () => {
       mockProjects.find((p) => p.id === form.projectId)?.name !== selectedIssueProjectName.value
 
     expect(showWarning).toBeTruthy()
+  })
+
+  it('should clear issue and tag when changing to No Project', () => {
+    const form = reactive({
+      projectId: 'proj-1',
+      tagIds: ['tag-1-a'],
+      issueId: undefined as string | undefined,
+      externalIssueId: '11476' as string | undefined,
+      issueTitle: '#11476 - Oprava KOM',
+      isProjectManuallySelected: true
+    })
+
+    const selectedIssueProjectName = ref('Timer2Ticket')
+    const selectedIssueProjectId = ref<string | null>('proj-1')
+
+    const triggerProjectWatch = (newVal: string) => {
+      const newProjEntity = mockProjects.find((p) => p.id === newVal)
+      const isNewProjectNoProject = !newVal || (newProjEntity?.isSystem ?? false)
+
+      // Clear system issue ID
+      if (!form.externalIssueId) {
+        form.issueId = undefined
+      }
+
+      // Clear mismatching external issue
+      if (form.externalIssueId && selectedIssueProjectName.value) {
+        const mismatch = selectedIssueProjectId.value
+          ? newVal !== selectedIssueProjectId.value
+          : newProjEntity &&
+            newProjEntity.name.toLowerCase() !== selectedIssueProjectName.value?.toLowerCase()
+
+        if (mismatch || isNewProjectNoProject) {
+          form.externalIssueId = undefined
+          form.issueId = undefined
+          form.issueTitle = ''
+          selectedIssueProjectName.value = ''
+          selectedIssueProjectId.value = null
+        }
+      }
+
+      if (isNewProjectNoProject) {
+        if (form.tagIds && form.tagIds.length > 0) {
+          form.tagIds = []
+        }
+      } else if (form.tagIds && form.tagIds.length > 0) {
+        // Auto-swap logic omitted here since we're testing the No Project branch
+      }
+      form.projectId = newVal
+    }
+
+    triggerProjectWatch('proj-no-project')
+
+    // Issue should be cleared
+    expect(form.externalIssueId).toBeUndefined()
+    expect(form.issueId).toBeUndefined()
+    expect(form.issueTitle).toBe('')
+
+    // Tag should be cleared
+    expect(form.tagIds).toEqual([])
   })
 })
