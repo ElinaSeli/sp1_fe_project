@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { issuesService } from '~/services'
+
 const timerStore = useTimerStore()
 const workspacesStore = useWorkspacesStore()
 const projectsStore = useProjectsStore()
@@ -58,7 +60,13 @@ const issueOptions = computed(() => issueResults.value.map(formatIssueLabel))
 
 const issueCache = new Map<
   string,
-  { external_id: number; issue_title: string; project_name: string; project_external_id: string }
+  {
+    external_id: number
+    issue_title: string
+    project_id: string | null
+    project_name: string
+    project_external_id: string | null
+  }
 >()
 
 watch(
@@ -84,6 +92,66 @@ const selectedIssueProjectName = computed(() => {
   return ''
 })
 
+// Check mismatch and auto-fill project safely, ignoring "No Project" or empty names.
+const handleProjectMapping = (
+  projName: string | undefined,
+  projId: string | null,
+  projExtId: string | null
+) => {
+  if (!projName || projName === '') return // Wait for details resolution
+
+  const localProj =
+    (projId && projects.value.find((p) => p.id === projId)) ||
+    projects.value.find(
+      (p) =>
+        (p.externalId && p.externalId === projExtId) ||
+        p.name.trim().toLowerCase() === projName.trim().toLowerCase()
+    ) ||
+    null
+
+  const currentProj = projects.value.find((p) => p.id === timerStore.draftEntry.projectId)
+  const isCurrentSystemNoProject = currentProj?.isSystem || currentProj?.name === 'No Project'
+
+  if (!timerStore.draftEntry.projectId || isCurrentSystemNoProject) {
+    if (localProj) {
+      isAutoFillingProjectFromIssue = true
+      timerStore.draftEntry.projectId = localProj.id
+      timerStore.draftEntry.isProjectManuallySelected = false
+      isAutoFillingProjectFromIssue = false
+    }
+  } else {
+    const sameProject =
+      (projId && timerStore.draftEntry.projectId === projId) ||
+      projects.value.find(
+        (p) =>
+          p.id === timerStore.draftEntry.projectId &&
+          (p.name.toLowerCase() === projName.toLowerCase() ||
+            (p.externalId && p.externalId === projExtId))
+      )
+    if (!sameProject) {
+      if (localProj) {
+        isAutoFillingProjectFromIssue = true
+        timerStore.draftEntry.projectId = localProj.id
+        timerStore.draftEntry.isProjectManuallySelected = false
+        isAutoFillingProjectFromIssue = false
+        toast.add({
+          title: 'Project switched',
+          description: `Project changed to "${projName}" to match the selected task.`,
+          color: 'warning',
+          icon: 'i-lucide-refresh-cw'
+        })
+      } else {
+        toast.add({
+          title: 'Project mismatch',
+          description: `This task belongs to "${projName}", which doesn't match the selected project.`,
+          color: 'warning',
+          icon: 'i-lucide-alert-triangle'
+        })
+      }
+    }
+  }
+}
+
 const activeIssueName = computed({
   get: () =>
     normalizeIssueTitle(
@@ -95,6 +163,7 @@ const activeIssueName = computed({
       timerStore.draftEntry.externalIssueId = null
       timerStore.draftEntry.issueTitle = ''
       timerStore.draftEntry.issueProjectName = ''
+      timerStore.draftEntry.issueProjectId = null
       return
     }
 
@@ -118,51 +187,55 @@ const activeIssueName = computed({
       timerStore.draftEntry.externalIssueId = String(match.external_id)
       timerStore.draftEntry.issueTitle = formatIssueLabel(match)
       timerStore.draftEntry.issueProjectName = match.project_name
+      // Store the resolved local UUID so we can do fast UUID comparison later
+      timerStore.draftEntry.issueProjectId = match.project_id ?? null
 
-      const localProj = projects.value.find(
-        (p) =>
-          (p.externalId && p.externalId === match.project_external_id) ||
-          p.name.trim().toLowerCase() === match.project_name.trim().toLowerCase()
-      )
+      handleProjectMapping(match.project_name, match.project_id, match.project_external_id)
 
-      if (!timerStore.draftEntry.projectId) {
-        // No project set — auto-fill silently
-        if (localProj) {
-          isAutoFillingProjectFromIssue = true
-          timerStore.draftEntry.projectId = localProj.id
-          timerStore.draftEntry.isProjectManuallySelected = false
-          isAutoFillingProjectFromIssue = false
-        }
-      } else {
-        // Project already set — check for mismatch
-        const currentProj = projects.value.find((p) => p.id === timerStore.draftEntry.projectId)
-        const sameProject =
-          currentProj &&
-          (currentProj.name.toLowerCase() === match.project_name.toLowerCase() ||
-            (currentProj.externalId && currentProj.externalId === match.project_external_id))
-        if (!sameProject) {
-          if (localProj) {
-            // Switch project to match the selected task (issue wins — it's the last action)
-            isAutoFillingProjectFromIssue = true
-            timerStore.draftEntry.projectId = localProj.id
-            timerStore.draftEntry.isProjectManuallySelected = false
-            isAutoFillingProjectFromIssue = false
-            toast.add({
-              title: 'Project switched',
-              description: `Project changed to "${match.project_name}" to match the selected task.`,
-              color: 'warning',
-              icon: 'i-lucide-refresh-cw'
-            })
-          } else {
-            // Issue's project not found locally — can't auto-switch; inline warning will show
-            toast.add({
-              title: 'Project mismatch',
-              description: `This task belongs to "${match.project_name}", which doesn't match the selected project.`,
-              color: 'warning',
-              icon: 'i-lucide-alert-triangle'
-            })
-          }
-        }
+      // SILENT DETAIL RESOLUTION WORKAROUND FOR REDMINE FTS INDEX BUG
+      if (workspaceId.value) {
+        issuesService
+          .search(workspaceId.value, `#${match.external_id}`)
+          .then((res) => {
+            const rawDetailed = res.data?.[0]
+            if (rawDetailed) {
+              const r = rawDetailed as {
+                external_id?: number | string
+                externalId?: number | string
+                issue_title?: string
+                issueTitle?: string
+                project_id?: string | null
+                projectId?: string | null
+                project_name?: string
+                projectName?: string
+                project_external_id?: string | null
+                projectExternalId?: string | null
+              }
+              const detailed = {
+                external_id:
+                  r.external_id !== undefined ? Number(r.external_id) : Number(r.externalId),
+                issue_title: r.issue_title !== undefined ? r.issue_title : (r.issueTitle ?? ''),
+                project_id: r.project_id !== undefined ? r.project_id : (r.projectId ?? null),
+                project_name: r.project_name !== undefined ? r.project_name : (r.projectName ?? ''),
+                project_external_id:
+                  r.project_external_id !== undefined
+                    ? r.project_external_id
+                    : (r.projectExternalId ?? null)
+              }
+
+              timerStore.draftEntry.issueProjectName = detailed.project_name
+              timerStore.draftEntry.issueProjectId = detailed.project_id
+
+              handleProjectMapping(
+                detailed.project_name,
+                detailed.project_id,
+                detailed.project_external_id
+              )
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to resolve search result details:', err)
+          })
       }
     }
   }
@@ -186,19 +259,24 @@ const selectedTagName = computed({
       return
     }
 
+    const currentProjectId = timerStore.draftEntry.projectId
+    const currentProj = projects.value.find((p) => p.id === currentProjectId)
+    const isCurrentNoProject = !currentProjectId || (currentProj?.isSystem ?? false)
+
     let t = null
-    if (timerStore.draftEntry.projectId) {
-      t = allTags.value.find(
-        (x) => x.name === name && x.projectId === timerStore.draftEntry.projectId
-      )
+    if (currentProjectId && !isCurrentNoProject) {
+      // Project is a real project: prefer tag from that project
+      t = allTags.value.find((x) => x.name === name && x.projectId === currentProjectId)
     }
     if (!t) {
+      // No project or system project: find the tag from any project
       t = allTags.value.find((x) => x.name === name)
     }
 
     if (t?.id) {
       timerStore.draftEntry.tagIds = [t.id]
-      if (!timerStore.draftEntry.projectId && t.projectId) {
+      // Autofill project from tag if no real project is selected yet
+      if (isCurrentNoProject && t.projectId) {
         timerStore.draftEntry.projectId = t.projectId
         timerStore.draftEntry.isProjectManuallySelected = false
       }
@@ -215,6 +293,10 @@ const elapsedSeconds = ref(0)
 const toast = useToast()
 const timerBarFocused = ref(false)
 
+function onIssueQueryChange(q: string) {
+  issueQuery.value = q
+}
+
 // Flag to suppress project-change watcher when issue auto-fills project
 let isAutoFillingProjectFromIssue = false
 
@@ -226,10 +308,13 @@ watch(
     if (!timerStore.draftEntry.isProjectManuallySelected) return
     if (!timerStore.draftEntry.externalIssueId || !timerStore.draftEntry.issueProjectName) return
     const newProj = projects.value.find((p) => p.id === newId)
-    if (
-      newProj &&
-      newProj.name.toLowerCase() !== timerStore.draftEntry.issueProjectName.toLowerCase()
-    ) {
+    // Check mismatch: prefer project_id comparison, fall back to name
+    const issueProjectId = timerStore.draftEntry.issueProjectId
+    const mismatch = issueProjectId
+      ? newId !== issueProjectId
+      : newProj &&
+        newProj.name.toLowerCase() !== timerStore.draftEntry.issueProjectName?.toLowerCase()
+    if (mismatch) {
       const clearedTitle = timerStore.draftEntry.issueTitle
       timerStore.draftEntry.externalIssueId = null
       timerStore.draftEntry.issueTitle = ''
@@ -423,7 +508,7 @@ onUnmounted(() => {
             :allow-custom="false"
             :dark="true"
             class="shrink-0 w-44 lg:w-60"
-            @query-change="(q) => (issueQuery = q)"
+            @query-change="onIssueQueryChange"
           />
 
           <span class="text-gray-200 dark:text-gray-700 select-none">|</span>
