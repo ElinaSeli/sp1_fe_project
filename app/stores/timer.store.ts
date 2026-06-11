@@ -88,9 +88,7 @@ export const useTimerStore = defineStore(
       )
       if (response.data) {
         // Defensive: Extract .content if the backend returns a PagedResponse, otherwise fallback to array
-        const listData = Array.isArray(response.data)
-          ? response.data
-          : (response.data as Record<string, unknown>).content
+        const listData = Array.isArray(response.data) ? response.data : response.data.content
         if (Array.isArray(listData)) {
           rawEntries.value = listData as TimeEntry[]
           entries.value = (listData as TimeEntry[]).map((e) => ({
