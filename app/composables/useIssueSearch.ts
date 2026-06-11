@@ -36,6 +36,35 @@ export function useIssueSearch(
       const { data } = await issuesService.search(wsId, q.trim(), projectExternalId.value)
       const serverResults = data ?? []
 
+      interface RawIssueSearchResponse {
+        external_id?: number | string
+        externalId?: number | string
+        issue_title?: string
+        issueTitle?: string
+        project_id?: string | null
+        projectId?: string | null
+        project_name?: string
+        projectName?: string
+        project_external_id?: string | null
+        projectExternalId?: string | null
+      }
+
+      // Normalize server results to standard snake_case IssueSearchResult interface
+      const normalizedServerResults: IssueSearchResult[] = (
+        serverResults as unknown as RawIssueSearchResponse[]
+      ).map((r) => {
+        return {
+          external_id: r.external_id !== undefined ? Number(r.external_id) : Number(r.externalId),
+          issue_title: r.issue_title !== undefined ? r.issue_title : (r.issueTitle ?? ''),
+          project_id: r.project_id !== undefined ? r.project_id : (r.projectId ?? null),
+          project_name: r.project_name !== undefined ? r.project_name : (r.projectName ?? ''),
+          project_external_id:
+            r.project_external_id !== undefined
+              ? r.project_external_id
+              : (r.projectExternalId ?? null)
+        }
+      })
+
       // Look up in local issuesStore to find matching local issues by name or externalId
       const issuesStore = useIssuesStore()
       const projectsStore = useProjectsStore()
@@ -54,13 +83,14 @@ export function useIssueSearch(
         return {
           external_id: Number(issue.externalId),
           issue_title: issue.name,
+          project_id: proj?.id ?? null,
           project_name: proj?.name || '',
-          project_external_id: proj?.externalId || ''
+          project_external_id: proj?.externalId ?? null
         }
       })
 
       // Combine server results and local database matches, removing duplicates by external_id
-      const combined = [...serverResults, ...mappedLocal]
+      const combined = [...normalizedServerResults, ...mappedLocal]
       const uniqueResults: IssueSearchResult[] = []
       const seenIds = new Set<number>()
       for (const item of combined) {

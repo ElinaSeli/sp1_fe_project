@@ -74,6 +74,7 @@ export interface Project {
   color?: string | null
   isExternal: boolean
   externalId?: string | null
+  isSystem?: boolean
 }
 
 export interface CreateProjectRequest {
@@ -96,7 +97,7 @@ export interface Issue {
   workspaceId: string
   projectId: string
   name: string
-
+  isSystem?: boolean
   externalId?: string | null
 }
 
@@ -252,12 +253,15 @@ export interface KeybindingBinding {
 /**
  * Result from GET /api/workspaces/{id}/issues/search.
  * Issues are never persisted locally — always searched live from Redmine.
+ * project_id is our local UUID (resolved by backend from Redmine's project.id).
  */
 export interface IssueSearchResult {
   external_id: number
   issue_title: string
+  /** Our local workspace-scoped UUID for the project — null if not synced locally. */
+  project_id: string | null
   project_name: string
-  project_external_id: string
+  project_external_id: string | null
 }
 
 // ---------------------------------------------------------------------------
