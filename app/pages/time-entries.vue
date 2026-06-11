@@ -13,6 +13,7 @@ const workspacesStore = useWorkspacesStore()
 const { activeWorkspaceId } = storeToRefs(workspacesStore)
 const toast = useToast()
 const confirm = useConfirm()
+const { formatDate } = useDateFormat()
 
 const dialogOpen = ref(false)
 const editingEntry = ref<TimeEntry | null>(null)
@@ -115,14 +116,6 @@ const formatTimeRange = (start: string, end: string | null | undefined) => {
   const startStr = formatTime(start)
   const endStr = end ? formatTime(end) : 'Now'
   return `${startStr} - ${endStr}`
-}
-
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr)
-  const today = new Date()
-  if (date.toDateString() === today.toDateString()) return 'Today'
-
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
 // Get project color for a time entry

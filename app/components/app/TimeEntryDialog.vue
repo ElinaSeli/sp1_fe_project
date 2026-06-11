@@ -20,6 +20,7 @@ const issuesStore = useIssuesStore()
 const tagsStore = useTagsStore()
 const toast = useToast()
 const confirm = useConfirm()
+const { dateFormat } = useDateFormat()
 
 const isEdit = computed(() => Boolean(props.entry))
 const isLoading = ref(false)
@@ -193,6 +194,77 @@ const timeValid = computed(
 )
 const canSubmit = computed(() => timeValid.value)
 
+// ---------------------------------------------------------------------------
+// Date display helpers — split datetime-local value into date + time parts
+// and reformat the date portion per the user's preference.
+// ---------------------------------------------------------------------------
+
+/** Parse a YYYY-MM-DDTHH:MM string and return { datePart, timePart } */
+function splitDatetime(val: string): { datePart: string; timePart: string } {
+  const [date = '', time = ''] = val.split('T')
+  return { datePart: date, timePart: time.slice(0, 5) }
+}
+
+/** Format a YYYY-MM-DD string as MM/DD/YYYY or DD/MM/YYYY */
+function displayDate(datePart: string): string {
+  if (!datePart) return ''
+  const [y = '', m = '', d = ''] = datePart.split('-')
+  return dateFormat.value === 'european' ? `${d}/${m}/${y}` : `${m}/${d}/${y}`
+}
+
+/** Parse a displayed date string back to YYYY-MM-DD */
+function parseDisplayDate(display: string): string {
+  const parts = display.split('/')
+  if (parts.length !== 3) return ''
+  if (dateFormat.value === 'european') {
+    // DD/MM/YYYY
+    const [d = '', m = '', y = ''] = parts
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+  }
+  // MM/DD/YYYY
+  const [m = '', d = '', y = ''] = parts
+  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+}
+
+// Reactive displayed values for the two date fields
+const startDateDisplay = computed({
+  get: () => displayDate(splitDatetime(form.timeStart).datePart),
+  set: (val: string) => {
+    const parsed = parseDisplayDate(val)
+    if (parsed) {
+      form.timeStart = `${parsed}T${splitDatetime(form.timeStart).timePart}`
+    }
+  }
+})
+
+const endDateDisplay = computed({
+  get: () => displayDate(splitDatetime(form.timeEnd).datePart),
+  set: (val: string) => {
+    const parsed = parseDisplayDate(val)
+    if (parsed) {
+      form.timeEnd = `${parsed}T${splitDatetime(form.timeEnd).timePart}`
+    }
+  }
+})
+
+const startTime = computed({
+  get: () => splitDatetime(form.timeStart).timePart,
+  set: (val: string) => {
+    form.timeStart = `${splitDatetime(form.timeStart).datePart}T${val}`
+  }
+})
+
+const endTime = computed({
+  get: () => splitDatetime(form.timeEnd).timePart,
+  set: (val: string) => {
+    form.timeEnd = `${splitDatetime(form.timeEnd).datePart}T${val}`
+  }
+})
+
+const datePlaceholder = computed(() =>
+  dateFormat.value === 'european' ? 'DD/MM/YYYY' : 'MM/DD/YYYY'
+)
+
 async function onSubmit() {
   if (!canSubmit.value) return
   isLoading.value = true
@@ -329,22 +401,38 @@ async function onDelete() {
           </UFormField>
 
           <div class="grid grid-cols-2 gap-4">
+            <!-- Start -->
             <UFormField label="Start" name="timeStart" required>
-              <input
-                v-model="form.timeStart"
-                type="datetime-local"
-                required
-                class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
+              <div class="flex gap-1.5">
+                <input
+                  v-model="startDateDisplay"
+                  type="text"
+                  :placeholder="datePlaceholder"
+                  class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <input
+                  v-model="startTime"
+                  type="time"
+                  class="w-28 shrink-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
             </UFormField>
 
+            <!-- End -->
             <UFormField label="End" name="timeEnd" required>
-              <input
-                v-model="form.timeEnd"
-                type="datetime-local"
-                required
-                class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
+              <div class="flex gap-1.5">
+                <input
+                  v-model="endDateDisplay"
+                  type="text"
+                  :placeholder="datePlaceholder"
+                  class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <input
+                  v-model="endTime"
+                  type="time"
+                  class="w-28 shrink-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
             </UFormField>
           </div>
 
