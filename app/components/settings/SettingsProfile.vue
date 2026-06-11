@@ -3,8 +3,8 @@ const authStore = useAuthStore()
 const { dateFormat, setFormat, previewFormatted } = useDateFormat()
 
 const dateFormatOptions = [
-  { value: 'american' as const, label: '🇺🇸 MM/DD/YYYY' },
-  { value: 'european' as const, label: '🇪🇺 DD/MM/YYYY' }
+  { value: 'american' as const, label: 'MM/DD/YYYY' },
+  { value: 'european' as const, label: 'DD/MM/YYYY' }
 ]
 
 const account = reactive({

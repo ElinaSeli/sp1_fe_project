@@ -94,15 +94,17 @@ export function useDateFormat() {
 
   const previewFormatted = computed(() => {
     if (dateFormat.value === 'european') {
+      // DD/MM/YYYY
       return previewDate.toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
+        day: '2-digit',
+        month: '2-digit',
         year: 'numeric'
       })
     }
+    // MM/DD/YYYY
     return previewDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
       year: 'numeric'
     })
   })
