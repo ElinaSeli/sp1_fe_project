@@ -125,6 +125,10 @@ function getProjectColor(projectId: string | null): string | null {
   return project?.color || null
 }
 
+function getTag(tagId: string) {
+  return tagsStore.tags.find((t) => t.id === tagId)
+}
+
 const groupedEntries = computed(() => {
   const groups: Record<string, { date: string; items: typeof timerStore.entries; total: number }> =
     {}
@@ -206,6 +210,33 @@ const groupedEntries = computed(() => {
                     projectsStore.projects.find((p) => p.id === entry.projectId)?.name ||
                     'No Project'
                   }}
+                </span>
+
+                <span
+                  v-if="entry.issueId"
+                  class="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+                >
+                  <UIcon name="i-lucide-check-square" class="text-[10px] opacity-70" />
+                  {{
+                    issuesStore.issues.find((i) => i.id === entry.issueId)?.name ||
+                    entry.issueTitle ||
+                    'Issue ' + entry.issueId.split('-')[0]
+                  }}
+                </span>
+
+                <span
+                  v-for="tagId in entry.tagIds || []"
+                  :key="tagId"
+                  class="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border"
+                  :class="
+                    getTag(tagId)?.color
+                      ? 'project-colored-badge'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                  "
+                  :style="getTag(tagId)?.color ? { '--project-color': getTag(tagId)?.color! } : {}"
+                >
+                  <UIcon name="i-lucide-tag" class="text-[10px] opacity-70" />
+                  {{ getTag(tagId)?.name || 'Tag' }}
                 </span>
               </div>
             </div>

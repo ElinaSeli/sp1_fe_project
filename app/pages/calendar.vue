@@ -269,6 +269,10 @@ function getProjectColor(projectId: string | null): string | null {
   return project?.color || null
 }
 
+function getTag(tagId: string) {
+  return tagsStore.tags.find((t) => t.id === tagId)
+}
+
 // Get entry background style with project color
 function getEntryBackgroundStyle(entry: TimeEntryViewModel) {
   const color = getProjectColor(entry.projectId)
@@ -600,10 +604,53 @@ function getEntryStyle(
                     {{ formatDuration(getDurationForDate(entry, formatDateStr(day))) }}
                   </div>
                   <div
-                    class="text-[11px] leading-tight font-medium truncate"
+                    class="text-[11px] leading-tight font-medium line-clamp-2"
                     :class="getProjectColor(entry.projectId) ? '' : 'text-gray-900 dark:text-white'"
                   >
                     {{ entry.description || '(No description)' }}
+                  </div>
+
+                  <div
+                    v-if="
+                      getDurationForDate(entry, formatDateStr(day)) >= 3600 &&
+                      (entry.issueId || (entry.tagIds && entry.tagIds.length))
+                    "
+                    class="mt-1 flex flex-wrap gap-1 overflow-hidden"
+                  >
+                    <span
+                      v-if="entry.issueId"
+                      class="flex items-center gap-0.5 text-[9px] font-medium px-1 py-0.5 rounded bg-white/40 dark:bg-black/30 truncate"
+                      :class="
+                        getProjectColor(entry.projectId)
+                          ? ''
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+                      "
+                    >
+                      <UIcon name="i-lucide-check-square" class="text-[9px] opacity-70 shrink-0" />
+                      <span class="truncate">{{
+                        issuesStore.issues.find((i) => i.id === entry.issueId)?.name ||
+                        entry.issueTitle ||
+                        'Issue ' + entry.issueId.split('-')[0]
+                      }}</span>
+                    </span>
+                    <span
+                      v-for="tagId in entry.tagIds || []"
+                      :key="tagId"
+                      class="flex items-center gap-0.5 text-[9px] font-medium px-1 py-0.5 rounded truncate border"
+                      :class="
+                        getTag(tagId)?.color
+                          ? 'project-colored-badge'
+                          : getProjectColor(entry.projectId)
+                            ? 'bg-white/40 dark:bg-black/30 border-transparent text-inherit'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                      "
+                      :style="
+                        getTag(tagId)?.color ? { '--project-color': getTag(tagId)?.color! } : {}
+                      "
+                    >
+                      <UIcon name="i-lucide-tag" class="text-[9px] opacity-70 shrink-0" />
+                      <span class="truncate">{{ getTag(tagId)?.name || 'Tag' }}</span>
+                    </span>
                   </div>
                 </div>
               </div>
