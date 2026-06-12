@@ -82,17 +82,6 @@ watch(
   { immediate: true, deep: true }
 )
 
-// The currently selected issue label (for display in the combobox)
-const selectedIssueProjectName = computed(() => {
-  if (
-    timerStore.draftEntry.issueTitle &&
-    (timerStore.draftEntry.externalIssueId || timerStore.draftEntry.issueId)
-  ) {
-    return timerStore.draftEntry.issueProjectName || ''
-  }
-  return ''
-})
-
 // Check mismatch and auto-fill project safely.
 // BE may omit project_name — guard only when we truly have no identifier at all.
 const handleProjectMapping = (
@@ -562,6 +551,7 @@ onUnmounted(() => {
           <span class="text-gray-200 dark:text-gray-700 select-none">|</span>
 
           <AppComboboxInput
+            ref="taskInput"
             v-model="activeIssueName"
             :options="issueOptions"
             :loading="isSearchingIssues"
@@ -585,31 +575,6 @@ onUnmounted(() => {
             class="shrink-0 w-24 lg:w-32"
           />
         </div>
-      </div>
-
-      <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
-
-      <!-- Group 2: Task + Tags -->
-      <div class="flex w-full md:w-auto items-center gap-1">
-        <AppComboboxInput
-          ref="taskInput"
-          v-model="activeIssueName"
-          :options="issues"
-          placeholder="Task"
-          :dark="true"
-          class="flex-1 min-w-[130px] md:w-32 lg:w-40"
-        />
-
-        <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
-
-        <AppComboboxInput
-          v-model="selectedTagName"
-          :options="availableTags"
-          placeholder="Tag"
-          :multiple="false"
-          :dark="true"
-          class="flex-1 min-w-[100px] md:w-32 lg:w-40"
-        />
       </div>
     </div>
 
