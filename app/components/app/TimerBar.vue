@@ -23,8 +23,9 @@ const activeProjectName = computed({
   get: () => projects.value.find((p) => p.id === timerStore.draftEntry.projectId)?.name || '',
   set: (name: string) => {
     const p = projects.value.find((x) => x.name === name)
-    timerStore.draftEntry.projectId = p ? p.id : null
+    // Set isProjectManuallySelected BEFORE projectId so the sync watcher sees it as a manual change
     timerStore.draftEntry.isProjectManuallySelected = true
+    timerStore.draftEntry.projectId = p ? p.id : null
   }
 })
 
@@ -92,22 +93,23 @@ const selectedIssueProjectName = computed(() => {
   return ''
 })
 
-// Check mismatch and auto-fill project safely, ignoring "No Project" or empty names.
+// Check mismatch and auto-fill project safely.
+// BE may omit project_name — guard only when we truly have no identifier at all.
 const handleProjectMapping = (
   projName: string | undefined,
   projId: string | null,
   projExtId: string | null
 ) => {
-  if (!projName || projName === '') return // Wait for details resolution
+  if (!projName && !projId && !projExtId) return
 
   const localProj =
     (projId && projects.value.find((p) => p.id === projId)) ||
-    projects.value.find(
-      (p) =>
-        (p.externalId && p.externalId === projExtId) ||
-        p.name.trim().toLowerCase() === projName.trim().toLowerCase()
-    ) ||
+    (projExtId && projects.value.find((p) => p.externalId && p.externalId === projExtId)) ||
+    (projName &&
+      projects.value.find((p) => p.name.trim().toLowerCase() === projName.trim().toLowerCase())) ||
     null
+
+  const resolvedName = localProj?.name || projName || ''
 
   const currentProj = projects.value.find((p) => p.id === timerStore.draftEntry.projectId)
   const isCurrentSystemNoProject = currentProj?.isSystem || currentProj?.name === 'No Project'
@@ -125,8 +127,8 @@ const handleProjectMapping = (
       projects.value.find(
         (p) =>
           p.id === timerStore.draftEntry.projectId &&
-          (p.name.toLowerCase() === projName.toLowerCase() ||
-            (p.externalId && p.externalId === projExtId))
+          ((projName && p.name.toLowerCase() === projName.toLowerCase()) ||
+            (p.externalId && projExtId && p.externalId === projExtId))
       )
     if (!sameProject) {
       if (localProj) {
@@ -136,14 +138,14 @@ const handleProjectMapping = (
         isAutoFillingProjectFromIssue = false
         toast.add({
           title: 'Project switched',
-          description: `Project changed to "${projName}" to match the selected task.`,
+          description: `Project changed to "${resolvedName}" to match the selected task.`,
           color: 'warning',
           icon: 'i-lucide-refresh-cw'
         })
-      } else {
+      } else if (resolvedName) {
         toast.add({
           title: 'Project mismatch',
-          description: `This task belongs to "${projName}", which doesn't match the selected project.`,
+          description: `This task belongs to "${resolvedName}", which doesn't match the selected project.`,
           color: 'warning',
           icon: 'i-lucide-alert-triangle'
         })
@@ -291,6 +293,7 @@ const isStarting = computed(() => timerStore.isStarting)
 const isStopping = computed(() => timerStore.isStopping)
 const elapsedSeconds = ref(0)
 const toast = useToast()
+const confirm = useConfirm()
 const timerBarFocused = ref(false)
 
 function onIssueQueryChange(q: string) {
@@ -300,34 +303,69 @@ function onIssueQueryChange(q: string) {
 // Flag to suppress project-change watcher when issue auto-fills project
 let isAutoFillingProjectFromIssue = false
 
-// When project is manually changed, clear any issue that no longer matches
+// When project is manually changed and an issue from a different project is selected,
+// ask the user: remove the task (keep new project) or keep the task (revert project).
 watch(
   () => timerStore.draftEntry.projectId,
-  (newId) => {
+  async (newId, oldId) => {
     if (isAutoFillingProjectFromIssue) return
     if (!timerStore.draftEntry.isProjectManuallySelected) return
-    if (!timerStore.draftEntry.externalIssueId || !timerStore.draftEntry.issueProjectName) return
-    const newProj = projects.value.find((p) => p.id === newId)
-    // Check mismatch: prefer project_id comparison, fall back to name
+    // Need an issue selected + at least one project identifier to detect mismatch
     const issueProjectId = timerStore.draftEntry.issueProjectId
+    if (
+      !timerStore.draftEntry.externalIssueId ||
+      (!timerStore.draftEntry.issueProjectName && !issueProjectId)
+    )
+      return
+    // Clearing the project → silently clear the issue too (no dialog)
+    if (!newId) {
+      timerStore.draftEntry.externalIssueId = null
+      timerStore.draftEntry.issueTitle = ''
+      timerStore.draftEntry.issueProjectName = ''
+      timerStore.draftEntry.issueProjectId = null
+      return
+    }
+    const newProj = projects.value.find((p) => p.id === newId)
+    // Check mismatch: prefer UUID comparison, fall back to name
     const mismatch = issueProjectId
       ? newId !== issueProjectId
       : newProj &&
         newProj.name.toLowerCase() !== timerStore.draftEntry.issueProjectName?.toLowerCase()
     if (mismatch) {
-      const clearedTitle = timerStore.draftEntry.issueTitle
-      timerStore.draftEntry.externalIssueId = null
-      timerStore.draftEntry.issueTitle = ''
-      timerStore.draftEntry.issueProjectName = ''
-      toast.add({
-        title: 'Task removed',
-        description: `"${clearedTitle}" was removed — it doesn't belong to the selected project.`,
-        color: 'warning',
-        icon: 'i-lucide-x-circle'
+      const issueTitle = timerStore.draftEntry.issueTitle
+      // Resolve issue's project name from local list (BE may omit project_name)
+      const issueProj = issueProjectId ? projects.value.find((p) => p.id === issueProjectId) : null
+      const issueProjectName =
+        issueProj?.name || timerStore.draftEntry.issueProjectName || 'another project'
+      const newProjName = newProj?.name ?? ''
+      const removeTask = await confirm({
+        title: 'Task belongs to another project',
+        description: `"${issueTitle}" belongs to "${issueProjectName}", not "${newProjName}".`,
+        confirmLabel: 'Remove task',
+        cancelLabel: 'Keep task',
+        confirmColor: 'warning',
+        icon: 'i-lucide-alert-triangle'
       })
+      if (removeTask) {
+        // Clear the task, keep the newly selected project
+        timerStore.draftEntry.externalIssueId = null
+        timerStore.draftEntry.issueTitle = ''
+        timerStore.draftEntry.issueProjectName = ''
+        timerStore.draftEntry.issueProjectId = null
+        // Close the project combobox (focus may have returned to it when dialog closed)
+        nextTick(() => projectComboboxRef.value?.close())
+      } else {
+        // Revert the project back — raise guard so this watcher doesn't re-fire
+        isAutoFillingProjectFromIssue = true
+        timerStore.draftEntry.projectId = oldId ?? null
+        timerStore.draftEntry.isProjectManuallySelected = false
+        isAutoFillingProjectFromIssue = false
+      }
     }
-  }
+  },
+  { flush: 'sync' }
 )
+const projectComboboxRef = ref<{ close: () => void } | null>(null)
 const descriptionInput = ref<HTMLInputElement | null>(null)
 const descFocused = ref(false)
 const descDisplayRef = ref<HTMLDivElement | null>(null)
@@ -458,11 +496,9 @@ onUnmounted(() => {
     >
       <!-- Scrollable fields row -->
       <div class="overflow-x-auto">
-        <div class="inline-flex flex-row flex-nowrap items-center gap-x-1 min-h-8">
+        <div class="flex flex-row flex-nowrap items-center gap-x-1 min-h-8 min-w-full">
           <!-- Description: marquee display when idle + value set -->
-          <div
-            class="relative min-w-[130px] w-[200px] lg:w-[260px] h-8 overflow-hidden flex items-center"
-          >
+          <div class="relative flex-1 min-w-[130px] h-8 overflow-hidden flex items-center">
             <div
               v-if="!descFocused && description"
               ref="descDisplayRef"
@@ -486,16 +522,33 @@ onUnmounted(() => {
               @focus="descFocused = true"
               @blur="descFocused = false"
             />
+            <button
+              v-if="description"
+              class="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-3.5 h-3.5 p-0 bg-transparent border-none cursor-pointer rounded-sm opacity-50 hover:opacity-100 text-slate-400 transition-opacity duration-100"
+              tabindex="-1"
+              @mousedown.prevent="description = ''"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path
+                  d="M1 1l8 8M9 1l-8 8"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </button>
           </div>
 
           <span class="text-gray-200 dark:text-gray-700 select-none">|</span>
 
           <AppComboboxInput
+            ref="projectComboboxRef"
             v-model="activeProjectName"
             :options="availableProjects"
             placeholder="Project"
             :dark="true"
-            class="shrink-0 w-28 lg:w-36"
+            :clearable="true"
+            class="shrink-0 w-36 lg:w-44"
           />
 
           <span class="text-gray-200 dark:text-gray-700 select-none">|</span>
@@ -507,7 +560,8 @@ onUnmounted(() => {
             placeholder="Search task…"
             :allow-custom="false"
             :dark="true"
-            class="shrink-0 w-44 lg:w-60"
+            :clearable="true"
+            class="shrink-0 w-52 lg:w-72"
             @query-change="onIssueQueryChange"
           />
 
@@ -519,7 +573,8 @@ onUnmounted(() => {
             placeholder="Tag"
             :multiple="false"
             :dark="true"
-            class="shrink-0 w-20 lg:w-24"
+            :clearable="true"
+            class="shrink-0 w-24 lg:w-32"
           />
         </div>
       </div>

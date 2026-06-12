@@ -150,29 +150,7 @@ watch(
       form.issueId = undefined
     }
 
-    // Clear mismatching external issue if project is changed
-    if (form.externalIssueId && selectedIssueProjectName.value) {
-      const mismatch = selectedIssueProjectId.value
-        ? newVal !== selectedIssueProjectId.value
-        : newProjEntity &&
-          newProjEntity.name.toLowerCase() !== selectedIssueProjectName.value?.toLowerCase()
-      if (mismatch || isNewProjectNoProject) {
-        const clearedTitle = form.issueTitle
-        form.externalIssueId = undefined
-        form.issueId = undefined
-        form.issueTitle = ''
-        selectedIssueProjectName.value = ''
-        selectedIssueProjectId.value = null
-        if (clearedTitle) {
-          toast.add({
-            title: 'Task removed',
-            description: `"${clearedTitle}" was removed — it doesn't belong to the selected project.`,
-            color: 'warning',
-            icon: 'i-lucide-x-circle'
-          })
-        }
-      }
-    }
+    // NOTE: issue-mismatch handling (confirm dialog) is in the async watcher below.
 
     if (isNewProjectNoProject) {
       // User confirmed: tags are imported with a specific project, so they should be cleared
@@ -212,6 +190,68 @@ watch(
           color: 'warning',
           icon: 'i-lucide-tag'
         })
+      }
+    }
+  },
+  { flush: 'sync' }
+)
+
+// When project is manually changed and a live Redmine issue from a different project is
+// selected, ask the user: remove the task (keep new project) or keep the task (revert project).
+watch(
+  () => form.projectId,
+  async (newVal, oldVal) => {
+    if (isInitializing.value) return
+    if (isAutoFillingProject) return
+    // Need an issue + at least one project identifier to detect mismatch
+    if (!form.externalIssueId || (!selectedIssueProjectName.value && !selectedIssueProjectId.value))
+      return
+
+    // Clearing the project → silently clear the issue too (no dialog)
+    if (!newVal) {
+      form.externalIssueId = undefined
+      form.issueId = undefined
+      form.issueTitle = ''
+      selectedIssueProjectName.value = ''
+      selectedIssueProjectId.value = null
+      return
+    }
+
+    const newProjEntity = projects.value.find((p) => p.id === newVal)
+    const isNewProjectNoProject = newProjEntity?.isSystem ?? false
+    const mismatch = selectedIssueProjectId.value
+      ? newVal !== selectedIssueProjectId.value
+      : newProjEntity &&
+        newProjEntity.name.toLowerCase() !== selectedIssueProjectName.value.toLowerCase()
+
+    if (mismatch || isNewProjectNoProject) {
+      const issueTitle = form.issueTitle
+      // Resolve issue's project name from local list (BE may omit project_name)
+      const issueProj = selectedIssueProjectId.value
+        ? projects.value.find((p) => p.id === selectedIssueProjectId.value)
+        : null
+      const issueProjName = issueProj?.name || selectedIssueProjectName.value || 'another project'
+      const newProjName = newProjEntity?.name ?? 'No Project'
+      const removeTask = await confirm({
+        title: 'Task belongs to another project',
+        description: `"${issueTitle}" belongs to "${issueProjName}", not "${newProjName}".`,
+        confirmLabel: 'Remove task',
+        cancelLabel: 'Keep task',
+        confirmColor: 'warning',
+        icon: 'i-lucide-alert-triangle'
+      })
+      if (removeTask) {
+        // Clear the task, keep the newly selected project
+        form.externalIssueId = undefined
+        form.issueId = undefined
+        form.issueTitle = ''
+        selectedIssueProjectName.value = ''
+        selectedIssueProjectId.value = null
+      } else {
+        // Revert the project back — raise guard so watchers don't re-fire
+        isAutoFillingProject = true
+        form.projectId = oldVal
+        isAutoFillingProject = false
       }
     }
   },
@@ -319,22 +359,23 @@ watch(
   }
 )
 
-// Check mismatch and auto-fill project safely, ignoring "No Project" or empty names.
+// Check mismatch and auto-fill project safely.
+// BE may omit project_name — guard only when we truly have no identifier at all.
 const handleProjectMapping = (
   projName: string | undefined,
   projId: string | null,
   projExtId: string | null
 ) => {
-  if (!projName || projName === '') return // Wait for details resolution
+  if (!projName && !projId && !projExtId) return
 
   const localProj =
     (projId && projects.value.find((p) => p.id === projId)) ||
-    projects.value.find(
-      (p) =>
-        (p.externalId && p.externalId === projExtId) ||
-        p.name.trim().toLowerCase() === projName.trim().toLowerCase()
-    ) ||
+    (projExtId && projects.value.find((p) => p.externalId && p.externalId === projExtId)) ||
+    (projName &&
+      projects.value.find((p) => p.name.trim().toLowerCase() === projName.trim().toLowerCase())) ||
     null
+
+  const resolvedName = localProj?.name || projName || ''
 
   const currentProj = projects.value.find((p) => p.id === form.projectId)
   const isCurrentSystemNoProject = currentProj?.isSystem || currentProj?.name === 'No Project'
@@ -352,8 +393,8 @@ const handleProjectMapping = (
       projects.value.find(
         (p) =>
           p.id === form.projectId &&
-          (p.name.toLowerCase() === projName.toLowerCase() ||
-            (p.externalId && p.externalId === projExtId))
+          ((projName && p.name.toLowerCase() === projName.toLowerCase()) ||
+            (p.externalId && projExtId && p.externalId === projExtId))
       )
     if (!sameProject) {
       if (localProj) {
@@ -363,14 +404,14 @@ const handleProjectMapping = (
         isAutoFillingProject = false
         toast.add({
           title: 'Project switched',
-          description: `Project changed to "${projName}" to match the selected task.`,
+          description: `Project changed to "${resolvedName}" to match the selected task.`,
           color: 'warning',
           icon: 'i-lucide-refresh-cw'
         })
-      } else {
+      } else if (resolvedName) {
         toast.add({
           title: 'Project mismatch',
-          description: `This task belongs to "${projName}", which doesn't match the selected project.`,
+          description: `This task belongs to "${resolvedName}", which doesn't match the selected project.`,
           color: 'warning',
           icon: 'i-lucide-alert-triangle'
         })

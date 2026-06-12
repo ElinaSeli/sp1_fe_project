@@ -65,6 +65,24 @@
         @blur="onBlur"
         @keydown="onKeydown"
       />
+      <!-- Clear button -->
+      <button
+        v-if="clearable && (modelValue || query)"
+        class="combobox-clear"
+        :class="dark ? 'combobox-clear--dark' : 'combobox-clear--light'"
+        tabindex="-1"
+        @mousedown.prevent="clearValue"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path
+            d="M1 1l8 8M9 1l-8 8"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+
       <!-- Loading spinner -->
       <svg
         v-if="loading"
@@ -193,6 +211,11 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  /** Show an × button to clear the current value */
+  clearable: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -206,6 +229,7 @@ const isOpen = ref(false)
 const query = ref('')
 const activeIdx = ref(-1)
 const isOverflowing = ref(false)
+let suppressNextFocus = false
 
 const checkOverflow = async () => {
   await nextTick()
@@ -322,6 +346,11 @@ watch(query, (q) => {
 // ─── Focus / blur ────────────────────────────────────────────────────────────
 
 const onFocus = () => {
+  if (suppressNextFocus) {
+    suppressNextFocus = false
+    inputRef.value?.blur()
+    return
+  }
   isOpen.value = true
   activeIdx.value = -1
   // Clear query so user sees full options list, not just the selected label
@@ -476,13 +505,56 @@ const focusInput = () => {
   inputRef.value?.focus()
 }
 
-defineExpose({ focus: focusInput })
+const clearValue = () => {
+  emit('update:modelValue', props.multiple ? [] : '')
+  query.value = ''
+  closeDropdown()
+  nextTick(() => inputRef.value?.blur())
+}
+
+defineExpose({
+  focus: focusInput,
+  close: () => {
+    suppressNextFocus = true
+    closeDropdown()
+    // Safety: clear flag if focus never returns (e.g. nothing focuses the input)
+    setTimeout(() => {
+      suppressNextFocus = false
+    }, 500)
+  }
+})
 </script>
 
 <style scoped>
 /* ─── Field (the visible "input box") ──────────────────────────────────────── */
 
 /* ─── Async loading spinner ──────────────────────────────────────────────────── */
+.combobox-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 2px;
+  opacity: 0.5;
+  transition: opacity 0.1s;
+}
+.combobox-clear:hover {
+  opacity: 1;
+}
+.combobox-clear--light {
+  color: #64748b;
+}
+.combobox-clear--dark {
+  color: #94a3b8;
+}
+
 .combobox-spinner {
   width: 14px;
   height: 14px;
