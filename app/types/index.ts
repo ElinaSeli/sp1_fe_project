@@ -74,7 +74,7 @@ export interface Project {
   workspaceId: string
   name: string
   color?: string | null
-  isSystem: boolean
+  isSystem?: boolean
   isExternal: boolean
   externalId?: string | null
 }
@@ -100,7 +100,7 @@ export interface Issue {
   workspaceId: string
   projectId: string
   name: string
-
+  isSystem?: boolean
   externalId?: string | null
 }
 
@@ -155,7 +155,10 @@ export interface TimeEntry {
 
 export interface CreateTimeEntryRequest {
   projectId?: string | null
+  /** Local UUID issue — mutually exclusive with externalIssueId. */
   issueId?: string | null
+  /** Redmine issue ID from live search — mutually exclusive with issueId. */
+  externalIssueId?: string | null
   description?: string | null
   timeStart: string // ISO date-time
   timeEnd: string // ISO date-time
@@ -165,6 +168,8 @@ export interface CreateTimeEntryRequest {
 export interface StartTimerRequest {
   projectId?: string | null
   issueId?: string | null
+  /** Redmine issue ID — mutually exclusive with issueId. */
+  externalIssueId?: string | null
   description?: string | null
   /** Tags to associate with the entry at start time. */
   tagIds?: string[]
@@ -172,7 +177,10 @@ export interface StartTimerRequest {
 
 export interface UpdateTimeEntryRequest {
   projectId?: string | null
+  /** Local UUID issue — mutually exclusive with externalIssueId. */
   issueId?: string | null
+  /** Redmine issue ID from live search — mutually exclusive with issueId. */
+  externalIssueId?: string | null
   description?: string | null
   timeStart: string
   timeEnd: string
@@ -241,12 +249,32 @@ export interface KeybindingBinding {
 }
 
 // ---------------------------------------------------------------------------
+// Issues — live search from Redmine (not stored locally)
+// ---------------------------------------------------------------------------
+
+/**
+ * Result from GET /api/workspaces/{id}/issues/search.
+ * Issues are never persisted locally — always searched live from Redmine.
+ * project_id is our local UUID (resolved by backend from Redmine's project.id).
+ */
+export interface IssueSearchResult {
+  external_id: number
+  issue_title: string
+  /** Our local workspace-scoped UUID for the project — null if not synced locally. */
+  project_id: string | null
+  project_name: string
+  project_external_id: string | null
+}
+
+// ---------------------------------------------------------------------------
 // Generic service layer contract
 // ---------------------------------------------------------------------------
 
 export interface ServiceResponse<T> {
   data: T | null
   error: string | null
+  /** HTTP status code — populated on error responses for specific handling (e.g. 504). */
+  statusCode?: number | null
 }
 
 export interface PagedResponse<T> {
@@ -267,6 +295,12 @@ export interface TimeEntryViewModel {
   projectId: string | null
   /** Preserved from raw TimeEntry so the edit dialog and resume flow can read it. */
   issueId: string | null
+  /**
+   * Display label for the issue. Populated locally when we know it (e.g. after
+   * stopping a timer or creating an entry). Empty after page refresh — issue
+   * titles are not stored in the DB, they come from live Redmine search.
+   */
+  issueTitle: string
   /** Preserved from raw TimeEntry so tags are visible in the list and edit dialog. */
   tagIds: string[]
   duration: number

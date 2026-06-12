@@ -29,12 +29,33 @@
         </button>
       </span>
 
-      <!-- Text input -->
+      <!-- Marquee display layer (shown when value selected + field idle) -->
+      <div
+        v-if="!isOpen && !props.multiple && query"
+        ref="displayRef"
+        class="combobox-display"
+        @click="focusInput"
+      >
+        <span
+          ref="displayTextRef"
+          class="combobox-display-text"
+          :class="[
+            dark ? 'combobox-input--dark' : 'combobox-input--light',
+            { 'combobox-marquee': isOverflowing }
+          ]"
+          >{{ query }}</span
+        >
+      </div>
+
+      <!-- Text input (in DOM always for focus; visually hidden behind display layer when idle) -->
       <input
         ref="inputRef"
         v-model="query"
         class="combobox-input"
-        :class="dark ? 'combobox-input--dark' : 'combobox-input--light'"
+        :class="[
+          dark ? 'combobox-input--dark' : 'combobox-input--light',
+          !isOpen && !props.multiple && query ? 'combobox-input--offscreen' : ''
+        ]"
         :placeholder="inputPlaceholder"
         autocomplete="off"
         autocorrect="off"
@@ -44,69 +65,111 @@
         @blur="onBlur"
         @keydown="onKeydown"
       />
+      <!-- Clear button -->
+      <button
+        v-if="clearable && (modelValue || query)"
+        class="combobox-clear"
+        :class="dark ? 'combobox-clear--dark' : 'combobox-clear--light'"
+        tabindex="-1"
+        @mousedown.prevent="clearValue"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path
+            d="M1 1l8 8M9 1l-8 8"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+
+      <!-- Loading spinner -->
+      <svg
+        v-if="loading"
+        class="combobox-spinner"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-dasharray="40 20"
+        />
+      </svg>
     </div>
 
-    <!-- Dropdown -->
-    <Transition name="cb-drop">
-      <div
-        v-if="isOpen && visibleOptions.length > 0"
-        class="combobox-dropdown"
-        :class="dark ? 'combobox-dropdown--dark' : 'combobox-dropdown--light'"
-      >
-        <!-- "Recent" section label shown only when not typing -->
-        <div v-if="showRecentLabel" class="combobox-section-label">
-          <svg
-            width="11"
-            height="11"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="inline mr-1 opacity-60"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          Recent
-        </div>
-
-        <!-- Options -->
+    <!-- Dropdown - Teleported to body to avoid clipping by modals -->
+    <Teleport to="body">
+      <Transition name="cb-drop">
         <div
-          v-for="(option, idx) in visibleOptions"
-          :key="option"
-          class="combobox-option"
-          :class="{
-            'combobox-option--active': idx === activeIdx,
-            'combobox-option--selected': isSelected(option),
-            'combobox-option--recent': isRecentItem(option) && !query.trim(),
-            'combobox-option--dark': dark,
-            'combobox-option--light': !dark
-          }"
-          @mousedown.prevent="choose(option)"
+          v-if="isOpen && visibleOptions.length > 0"
+          class="combobox-dropdown"
+          :class="[
+            dark ? 'combobox-dropdown--dark' : 'combobox-dropdown--light',
+            'combobox-dropdown--teleported'
+          ]"
+          :style="dropdownStyle"
         >
-          <span class="flex-1 truncate">{{ option }}</span>
-          <span v-if="isRecentItem(option) && !query.trim()" class="combobox-recent-badge"
-            >recent</span
+          <!-- "Recent" section label shown only when not typing -->
+          <div v-if="showRecentLabel" class="combobox-section-label">
+            <svg
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="inline mr-1 opacity-60"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            Recent
+          </div>
+
+          <!-- Options -->
+          <div
+            v-for="(option, idx) in visibleOptions"
+            :key="option"
+            class="combobox-option"
+            :class="{
+              'combobox-option--active': idx === activeIdx,
+              'combobox-option--selected': isSelected(option),
+              'combobox-option--recent': isRecentItem(option) && !query.trim(),
+              'combobox-option--dark': dark,
+              'combobox-option--light': !dark
+            }"
+            @mousedown.prevent="choose(option)"
           >
-          <svg
-            v-if="isSelected(option)"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="3"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="ml-2 text-primary-500 shrink-0"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+            <span class="flex-1 truncate">{{ option }}</span>
+            <span v-if="isRecentItem(option) && !query.trim()" class="combobox-recent-badge"
+              >recent</span
+            >
+            <svg
+              v-if="isSelected(option)"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="ml-2 text-primary-500 shrink-0"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -143,16 +206,76 @@ const props = defineProps({
   dark: {
     type: Boolean,
     default: false
+  },
+  /** Show a loading spinner (for async search) */
+  loading: {
+    type: Boolean,
+    default: false
+  },
+  /** Show an × button to clear the current value */
+  clearable: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'confirm', 'submit'])
+const emit = defineEmits(['update:modelValue', 'confirm', 'submit', 'queryChange'])
 
 const wrapperRef = ref(null)
 const inputRef = ref(null)
+const displayRef = ref(null)
+const displayTextRef = ref(null)
 const isOpen = ref(false)
 const query = ref('')
 const activeIdx = ref(-1)
+const isOverflowing = ref(false)
+let suppressNextFocus = false
+
+const checkOverflow = async () => {
+  await nextTick()
+  if (!displayRef.value || !displayTextRef.value) {
+    isOverflowing.value = false
+    return
+  }
+  const containerW = displayRef.value.clientWidth
+  const textW = displayTextRef.value.scrollWidth
+  if (textW > containerW) {
+    isOverflowing.value = true
+    displayTextRef.value.style.setProperty('--marquee-offset', `${containerW - textW}px`)
+  } else {
+    isOverflowing.value = false
+  }
+}
+
+watch([query, isOpen], () => {
+  if (!isOpen.value && query.value) checkOverflow()
+  else isOverflowing.value = false
+})
+
+// ─── Dropdown positioning (teleported to body) ─────────────────────────────────
+
+const dropdownStyle = computed(() => {
+  if (!isOpen.value || !wrapperRef.value) {
+    return { display: 'none' }
+  }
+
+  try {
+    const rect = wrapperRef.value.getBoundingClientRect()
+    const maxWidth = Math.min(window.innerWidth - 20, 500)
+    return {
+      position: 'fixed',
+      top: `${rect.bottom + 6}px`,
+      left: `${Math.max(10, Math.min(rect.left, window.innerWidth - maxWidth - 10))}px`,
+      minWidth: '200px',
+      maxWidth: `${maxWidth}px`,
+      zIndex: 99999,
+      pointerEvents: 'auto'
+    }
+  } catch {
+    // Fallback if getBoundingClientRect fails
+    return { display: 'none' }
+  }
+})
 
 // ─── Selection helpers ───────────────────────────────────────────────────────
 
@@ -216,9 +339,18 @@ watch(
   { immediate: true }
 )
 
+watch(query, (q) => {
+  emit('queryChange', q)
+})
+
 // ─── Focus / blur ────────────────────────────────────────────────────────────
 
 const onFocus = () => {
+  if (suppressNextFocus) {
+    suppressNextFocus = false
+    inputRef.value?.blur()
+    return
+  }
   isOpen.value = true
   activeIdx.value = -1
   // Clear query so user sees full options list, not just the selected label
@@ -228,9 +360,8 @@ const onFocus = () => {
 const onBlur = () => {
   // Small delay so mousedown on dropdown option can fire first
   setTimeout(() => {
-    if (!wrapperRef.value?.contains(document.activeElement)) {
-      closeDropdown()
-    }
+    // Always close on blur - the contains() check doesn't work with teleported elements
+    closeDropdown()
   }, 150)
 }
 
@@ -342,6 +473,9 @@ const choose = (option, preventFocusOverride = false) => {
     query.value = option
     isOpen.value = false
     activeIdx.value = -1
+    nextTick(() => {
+      inputRef.value?.blur()
+    })
   }
 }
 
@@ -371,11 +505,69 @@ const focusInput = () => {
   inputRef.value?.focus()
 }
 
-defineExpose({ focus: focusInput })
+const clearValue = () => {
+  emit('update:modelValue', props.multiple ? [] : '')
+  query.value = ''
+  closeDropdown()
+  nextTick(() => inputRef.value?.blur())
+}
+
+defineExpose({
+  focus: focusInput,
+  close: () => {
+    suppressNextFocus = true
+    closeDropdown()
+    // Safety: clear flag if focus never returns (e.g. nothing focuses the input)
+    setTimeout(() => {
+      suppressNextFocus = false
+    }, 500)
+  }
+})
 </script>
 
 <style scoped>
 /* ─── Field (the visible "input box") ──────────────────────────────────────── */
+
+/* ─── Async loading spinner ──────────────────────────────────────────────────── */
+.combobox-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 2px;
+  opacity: 0.5;
+  transition: opacity 0.1s;
+}
+.combobox-clear:hover {
+  opacity: 1;
+}
+.combobox-clear--light {
+  color: #64748b;
+}
+.combobox-clear--dark {
+  color: #94a3b8;
+}
+
+.combobox-spinner {
+  width: 14px;
+  height: 14px;
+  color: #10b981;
+  flex-shrink: 0;
+  animation: cb-spin 0.8s linear infinite;
+}
+@keyframes cb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .combobox-field {
   display: flex;
   align-items: center;
@@ -417,6 +609,44 @@ defineExpose({ focus: focusInput })
   background: transparent;
   font-size: 0.875rem;
   line-height: 1.25rem;
+}
+
+.combobox-input--offscreen {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+
+/* ─── Marquee display layer ───────────────────────────────────────────────────── */
+.combobox-display {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  cursor: text;
+}
+
+.combobox-display-text {
+  display: block;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+@keyframes combobox-marquee {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  85%,
+  100% {
+    transform: translateX(var(--marquee-offset, 0px));
+  }
+}
+
+.combobox-marquee {
+  animation: combobox-marquee 4s ease-in-out infinite alternate;
 }
 .combobox-input--light {
   color: #1e293b;
@@ -480,9 +710,7 @@ defineExpose({ focus: focusInput })
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  min-width: 200px;
   width: max-content;
-  max-width: 360px;
   max-height: 260px;
   overflow-y: auto;
   border-radius: 10px;
@@ -490,6 +718,12 @@ defineExpose({ focus: focusInput })
   padding: 4px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
+
+/* When teleported to body, use fixed positioning and inline styles override absolute */
+.combobox-dropdown--teleported {
+  position: fixed;
+}
+
 .combobox-dropdown--light {
   background: #ffffff;
   border: 1px solid #e2e8f0;

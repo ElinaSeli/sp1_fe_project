@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { issuesService } from '~/services'
+
 const timerStore = useTimerStore()
 const workspacesStore = useWorkspacesStore()
 const projectsStore = useProjectsStore()
-const issuesStore = useIssuesStore()
 const tagsStore = useTagsStore()
+const issuesStore = useIssuesStore()
 
 const description = computed({
   get: () => timerStore.draftEntry.description,
@@ -21,45 +23,211 @@ const activeProjectName = computed({
   get: () => projects.value.find((p) => p.id === timerStore.draftEntry.projectId)?.name || '',
   set: (name: string) => {
     const p = projects.value.find((x) => x.name === name)
+    // Set isProjectManuallySelected BEFORE projectId so the sync watcher sees it as a manual change
+    timerStore.draftEntry.isProjectManuallySelected = true
     timerStore.draftEntry.projectId = p ? p.id : null
   }
 })
 
-const issues = computed(() => {
-  const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
-  let filtered = all
-  if (timerStore.draftEntry.projectId) {
-    filtered = all.filter((i) => i.projectId === timerStore.draftEntry.projectId)
+// --- Live Issue Search (Redmine pass-through) ---
+const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
+const {
+  query: issueQuery,
+  results: issueResults,
+  isSearching: isSearchingIssues
+} = useIssueSearch(
+  workspaceId,
+  computed(() => null)
+)
+
+// Strip any leading "#id - " the backend may already include in issue_title, then re-format
+const formatIssueLabel = (r: { external_id: number; issue_title: string }) =>
+  r.issue_title.includes(`#${r.external_id}`)
+    ? r.issue_title
+    : `#${r.external_id} - ${r.issue_title}`
+
+// Normalize a stored issueTitle that may have been saved with a doubled prefix
+const normalizeIssueTitle = (title: string, extId: string | null) => {
+  if (!title || !extId) return title
+  const prefix = `#${extId} - `
+  if (title.startsWith(prefix) && title.slice(prefix.length).includes(`#${extId}`)) {
+    return title.slice(prefix.length)
   }
-  return Array.from(new Set(filtered.map((i) => i.name)))
-})
+  return title
+}
+
+// Map search results to option labels for the combobox
+const issueOptions = computed(() => issueResults.value.map(formatIssueLabel))
+
+const issueCache = new Map<
+  string,
+  {
+    external_id: number
+    issue_title: string
+    project_id: string | null
+    project_name: string
+    project_external_id: string | null
+  }
+>()
+
+watch(
+  () => issueResults.value,
+  (newResults) => {
+    if (newResults) {
+      for (const r of newResults) {
+        issueCache.set(formatIssueLabel(r), r)
+      }
+    }
+  },
+  { immediate: true, deep: true }
+)
+
+// Check mismatch and auto-fill project safely.
+// BE may omit project_name — guard only when we truly have no identifier at all.
+const handleProjectMapping = (
+  projName: string | undefined,
+  projId: string | null,
+  projExtId: string | null
+) => {
+  if (!projName && !projId && !projExtId) return
+
+  const localProj =
+    (projId && projects.value.find((p) => p.id === projId)) ||
+    (projExtId && projects.value.find((p) => p.externalId && p.externalId === projExtId)) ||
+    (projName &&
+      projects.value.find((p) => p.name.trim().toLowerCase() === projName.trim().toLowerCase())) ||
+    null
+
+  const resolvedName = localProj?.name || projName || ''
+
+  const currentProj = projects.value.find((p) => p.id === timerStore.draftEntry.projectId)
+  const isCurrentSystemNoProject = currentProj?.isSystem || currentProj?.name === 'No Project'
+
+  if (!timerStore.draftEntry.projectId || isCurrentSystemNoProject) {
+    if (localProj) {
+      isAutoFillingProjectFromIssue = true
+      timerStore.draftEntry.projectId = localProj.id
+      timerStore.draftEntry.isProjectManuallySelected = false
+      isAutoFillingProjectFromIssue = false
+    }
+  } else {
+    const sameProject =
+      (projId && timerStore.draftEntry.projectId === projId) ||
+      projects.value.find(
+        (p) =>
+          p.id === timerStore.draftEntry.projectId &&
+          ((projName && p.name.toLowerCase() === projName.toLowerCase()) ||
+            (p.externalId && projExtId && p.externalId === projExtId))
+      )
+    if (!sameProject) {
+      if (localProj) {
+        isAutoFillingProjectFromIssue = true
+        timerStore.draftEntry.projectId = localProj.id
+        timerStore.draftEntry.isProjectManuallySelected = false
+        isAutoFillingProjectFromIssue = false
+        toast.add({
+          title: 'Project switched',
+          description: `Project changed to "${resolvedName}" to match the selected task.`,
+          color: 'warning',
+          icon: 'i-lucide-refresh-cw'
+        })
+      } else if (resolvedName) {
+        toast.add({
+          title: 'Project mismatch',
+          description: `This task belongs to "${resolvedName}", which doesn't match the selected project.`,
+          color: 'warning',
+          icon: 'i-lucide-alert-triangle'
+        })
+      }
+    }
+  }
+}
 
 const activeIssueName = computed({
-  get: () => {
-    const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
-    return all.find((i) => i.id === timerStore.draftEntry.issueId)?.name || ''
-  },
+  get: () =>
+    normalizeIssueTitle(
+      timerStore.draftEntry.issueTitle ?? '',
+      timerStore.draftEntry.externalIssueId
+    ),
   set: (name: string) => {
-    const all = Array.isArray(issuesStore.issues) ? issuesStore.issues : []
-
-    // First try to find the issue in the currently selected project
-    let i = null
-    if (timerStore.draftEntry.projectId) {
-      i = all.find((x) => x.name === name && x.projectId === timerStore.draftEntry.projectId)
-    }
-    // Fallback to any issue with that name
-    if (!i) {
-      i = all.find((x) => x.name === name)
+    if (!name) {
+      timerStore.draftEntry.externalIssueId = null
+      timerStore.draftEntry.issueTitle = ''
+      timerStore.draftEntry.issueProjectName = ''
+      timerStore.draftEntry.issueProjectId = null
+      return
     }
 
-    timerStore.draftEntry.issueId = i ? i.id : null
+    let match = null
+    const matchId = name.trim().match(/^#(\d+)/)
+    if (matchId) {
+      const extId = Number(matchId[1])
+      match =
+        Array.from(issueCache.values()).find((r) => r.external_id === extId) ||
+        issueResults.value.find((r) => r.external_id === extId)
+    }
 
-    // Auto-select the project if an issue is picked and the project doesn't match
-    if (
-      i &&
-      (!timerStore.draftEntry.projectId || timerStore.draftEntry.projectId !== i.projectId)
-    ) {
-      timerStore.draftEntry.projectId = i.projectId
+    if (!match) {
+      const key = name.trim()
+      match =
+        issueCache.get(key) ||
+        issueResults.value.find((r) => formatIssueLabel(r) === key || r.issue_title === key)
+    }
+
+    if (match) {
+      timerStore.draftEntry.externalIssueId = String(match.external_id)
+      timerStore.draftEntry.issueTitle = formatIssueLabel(match)
+      timerStore.draftEntry.issueProjectName = match.project_name
+      // Store the resolved local UUID so we can do fast UUID comparison later
+      timerStore.draftEntry.issueProjectId = match.project_id ?? null
+
+      handleProjectMapping(match.project_name, match.project_id, match.project_external_id)
+
+      // SILENT DETAIL RESOLUTION WORKAROUND FOR REDMINE FTS INDEX BUG
+      if (workspaceId.value) {
+        issuesService
+          .search(workspaceId.value, `#${match.external_id}`)
+          .then((res) => {
+            const rawDetailed = res.data?.[0]
+            if (rawDetailed) {
+              const r = rawDetailed as {
+                external_id?: number | string
+                externalId?: number | string
+                issue_title?: string
+                issueTitle?: string
+                project_id?: string | null
+                projectId?: string | null
+                project_name?: string
+                projectName?: string
+                project_external_id?: string | null
+                projectExternalId?: string | null
+              }
+              const detailed = {
+                external_id:
+                  r.external_id !== undefined ? Number(r.external_id) : Number(r.externalId),
+                issue_title: r.issue_title !== undefined ? r.issue_title : (r.issueTitle ?? ''),
+                project_id: r.project_id !== undefined ? r.project_id : (r.projectId ?? null),
+                project_name: r.project_name !== undefined ? r.project_name : (r.projectName ?? ''),
+                project_external_id:
+                  r.project_external_id !== undefined
+                    ? r.project_external_id
+                    : (r.projectExternalId ?? null)
+              }
+
+              timerStore.draftEntry.issueProjectName = detailed.project_name
+              timerStore.draftEntry.issueProjectId = detailed.project_id
+
+              handleProjectMapping(
+                detailed.project_name,
+                detailed.project_id,
+                detailed.project_external_id
+              )
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to resolve search result details:', err)
+          })
+      }
     }
   }
 })
@@ -82,20 +250,26 @@ const selectedTagName = computed({
       return
     }
 
+    const currentProjectId = timerStore.draftEntry.projectId
+    const currentProj = projects.value.find((p) => p.id === currentProjectId)
+    const isCurrentNoProject = !currentProjectId || (currentProj?.isSystem ?? false)
+
     let t = null
-    if (timerStore.draftEntry.projectId) {
-      t = allTags.value.find(
-        (x) => x.name === name && x.projectId === timerStore.draftEntry.projectId
-      )
+    if (currentProjectId && !isCurrentNoProject) {
+      // Project is a real project: prefer tag from that project
+      t = allTags.value.find((x) => x.name === name && x.projectId === currentProjectId)
     }
     if (!t) {
+      // No project or system project: find the tag from any project
       t = allTags.value.find((x) => x.name === name)
     }
 
     if (t?.id) {
       timerStore.draftEntry.tagIds = [t.id]
-      if (!timerStore.draftEntry.projectId && t.projectId) {
+      // Autofill project from tag if no real project is selected yet
+      if (isCurrentNoProject && t.projectId) {
         timerStore.draftEntry.projectId = t.projectId
+        timerStore.draftEntry.isProjectManuallySelected = false
       }
     } else {
       timerStore.draftEntry.tagIds = []
@@ -108,8 +282,110 @@ const isStarting = computed(() => timerStore.isStarting)
 const isStopping = computed(() => timerStore.isStopping)
 const elapsedSeconds = ref(0)
 const toast = useToast()
+const confirm = useConfirm()
 const timerBarFocused = ref(false)
+
+function onIssueQueryChange(q: string) {
+  issueQuery.value = q
+}
+
+// Flag to suppress project-change watcher when issue auto-fills project
+let isAutoFillingProjectFromIssue = false
+
+// When project is manually changed and an issue from a different project is selected,
+// ask the user: remove the task (keep new project) or keep the task (revert project).
+watch(
+  () => timerStore.draftEntry.projectId,
+  async (newId, oldId) => {
+    if (isAutoFillingProjectFromIssue) return
+    if (!timerStore.draftEntry.isProjectManuallySelected) return
+    // Need an issue selected + at least one project identifier to detect mismatch
+    const issueProjectId = timerStore.draftEntry.issueProjectId
+    if (
+      !timerStore.draftEntry.externalIssueId ||
+      (!timerStore.draftEntry.issueProjectName && !issueProjectId)
+    )
+      return
+    // Clearing the project → silently clear the issue too (no dialog)
+    if (!newId) {
+      timerStore.draftEntry.externalIssueId = null
+      timerStore.draftEntry.issueTitle = ''
+      timerStore.draftEntry.issueProjectName = ''
+      timerStore.draftEntry.issueProjectId = null
+      return
+    }
+    const newProj = projects.value.find((p) => p.id === newId)
+    // Check mismatch: prefer UUID comparison, fall back to name
+    const mismatch = issueProjectId
+      ? newId !== issueProjectId
+      : newProj &&
+        newProj.name.toLowerCase() !== timerStore.draftEntry.issueProjectName?.toLowerCase()
+    if (mismatch) {
+      const issueTitle = timerStore.draftEntry.issueTitle
+      // Resolve issue's project name from local list (BE may omit project_name)
+      const issueProj = issueProjectId ? projects.value.find((p) => p.id === issueProjectId) : null
+      const issueProjectName =
+        issueProj?.name || timerStore.draftEntry.issueProjectName || 'another project'
+      const newProjName = newProj?.name ?? ''
+      const removeTask = await confirm({
+        title: 'Task belongs to another project',
+        description: `"${issueTitle}" belongs to "${issueProjectName}", not "${newProjName}".`,
+        confirmLabel: 'Remove task',
+        cancelLabel: 'Keep task',
+        confirmColor: 'warning',
+        icon: 'i-lucide-alert-triangle'
+      })
+      if (removeTask) {
+        // Clear the task, keep the newly selected project
+        timerStore.draftEntry.externalIssueId = null
+        timerStore.draftEntry.issueTitle = ''
+        timerStore.draftEntry.issueProjectName = ''
+        timerStore.draftEntry.issueProjectId = null
+        // Close the project combobox (focus may have returned to it when dialog closed)
+        nextTick(() => projectComboboxRef.value?.close())
+      } else {
+        // Revert the project back — raise guard so this watcher doesn't re-fire
+        isAutoFillingProjectFromIssue = true
+        timerStore.draftEntry.projectId = oldId ?? null
+        timerStore.draftEntry.isProjectManuallySelected = false
+        isAutoFillingProjectFromIssue = false
+      }
+    }
+  },
+  { flush: 'sync' }
+)
+const projectComboboxRef = ref<{ close: () => void } | null>(null)
 const descriptionInput = ref<HTMLInputElement | null>(null)
+const descFocused = ref(false)
+const descDisplayRef = ref<HTMLDivElement | null>(null)
+const descTextRef = ref<HTMLSpanElement | null>(null)
+const descOverflowing = ref(false)
+
+const checkDescOverflow = async () => {
+  await nextTick()
+  if (!descDisplayRef.value || !descTextRef.value) {
+    descOverflowing.value = false
+    return
+  }
+  const containerW = descDisplayRef.value.clientWidth
+  const textW = descTextRef.value.scrollWidth
+  if (textW > containerW) {
+    descOverflowing.value = true
+    descTextRef.value.style.setProperty('--marquee-offset', `${containerW - textW}px`)
+  } else {
+    descOverflowing.value = false
+  }
+}
+
+watch([description, descFocused], () => {
+  if (!descFocused.value && description.value) checkDescOverflow()
+  else descOverflowing.value = false
+})
+
+const focusDescInput = () => {
+  descFocused.value = true
+  nextTick(() => descriptionInput.value?.focus())
+}
 
 const onTimerBarFocusout = (e: FocusEvent) => {
   const currentTarget = e.currentTarget as Node | null
@@ -118,16 +394,14 @@ const onTimerBarFocusout = (e: FocusEvent) => {
   }
 }
 
-const workspaceId = computed(() => workspacesStore.activeWorkspaceId)
-
 watch(
   workspaceId,
   async (id) => {
     if (id) {
       await Promise.all([
         projectsStore.fetchProjects(),
-        issuesStore.fetchIssues(),
-        tagsStore.fetchTags()
+        tagsStore.fetchTags(),
+        issuesStore.fetchIssues()
       ])
     }
   },
@@ -208,7 +482,7 @@ onUnmounted(() => {
   >
     <!-- Middle: Input Bar (Keyboard First) -->
     <div
-      class="flex-1 w-full md:w-auto order-last md:order-none mt-3 md:mt-0 flex flex-col md:flex-row items-center flex-wrap gap-x-1 gap-y-2 px-3 py-2 mx-0 sm:mx-4 rounded-lg border transition-all duration-300"
+      class="flex-1 w-full md:w-auto order-last md:order-none mt-3 md:mt-0 px-3 py-1.5 mx-0 sm:mx-4 rounded-lg border transition-all duration-300"
       :class="
         timerBarFocused
           ? 'border-primary-500/50 bg-white dark:bg-gray-800 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
@@ -217,50 +491,90 @@ onUnmounted(() => {
       @focusin="timerBarFocused = true"
       @focusout="onTimerBarFocusout"
     >
-      <!-- Group 1: Description + Project -->
-      <div class="flex w-full md:w-auto flex-1 items-center gap-1">
-        <input
-          ref="descriptionInput"
-          v-model="description"
-          data-focus="desc-field"
-          placeholder="What are you working on? (Alt+T or /)"
-          class="flex-1 min-w-[150px] bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 h-9 truncate"
-        />
+      <!-- Scrollable fields row -->
+      <div class="overflow-x-auto">
+        <div class="flex flex-row flex-nowrap items-center gap-x-1 min-h-8 min-w-full">
+          <!-- Description: marquee display when idle + value set -->
+          <div class="relative flex-1 min-w-[130px] h-8 overflow-hidden flex items-center">
+            <div
+              v-if="!descFocused && description"
+              ref="descDisplayRef"
+              class="absolute inset-0 flex items-center overflow-hidden cursor-text"
+              @click="focusDescInput"
+            >
+              <span
+                ref="descTextRef"
+                class="whitespace-nowrap text-xs text-gray-900 dark:text-gray-200"
+                :class="{ 'desc-marquee': descOverflowing }"
+                >{{ description }}</span
+              >
+            </div>
+            <input
+              ref="descriptionInput"
+              v-model="description"
+              data-focus="desc-field"
+              placeholder="What are you working on? (Alt+T or /)"
+              class="w-full bg-transparent border-none outline-none text-xs text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 h-8"
+              :class="{ 'opacity-0': !descFocused && description }"
+              @focus="descFocused = true"
+              @blur="descFocused = false"
+            />
+            <button
+              v-if="description"
+              class="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-3.5 h-3.5 p-0 bg-transparent border-none cursor-pointer rounded-sm opacity-50 hover:opacity-100 text-slate-400 transition-opacity duration-100"
+              tabindex="-1"
+              @mousedown.prevent="description = ''"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path
+                  d="M1 1l8 8M9 1l-8 8"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </button>
+          </div>
 
-        <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
+          <span class="text-gray-200 dark:text-gray-700 select-none">|</span>
 
-        <AppComboboxInput
-          v-model="activeProjectName"
-          :options="availableProjects"
-          placeholder="Project"
-          :dark="true"
-          class="flex-1 min-w-[130px] md:w-32 lg:w-40"
-        />
-      </div>
+          <AppComboboxInput
+            ref="projectComboboxRef"
+            v-model="activeProjectName"
+            :options="availableProjects"
+            placeholder="Project"
+            :dark="true"
+            :clearable="true"
+            class="shrink-0 w-36 lg:w-44"
+          />
 
-      <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
+          <span class="text-gray-200 dark:text-gray-700 select-none">|</span>
 
-      <!-- Group 2: Task + Tags -->
-      <div class="flex w-full md:w-auto items-center gap-1">
-        <AppComboboxInput
-          ref="taskInput"
-          v-model="activeIssueName"
-          :options="issues"
-          placeholder="Task"
-          :dark="true"
-          class="flex-1 min-w-[130px] md:w-32 lg:w-40"
-        />
+          <AppComboboxInput
+            ref="taskInput"
+            v-model="activeIssueName"
+            :options="issueOptions"
+            :loading="isSearchingIssues"
+            placeholder="Search task…"
+            :allow-custom="false"
+            :dark="true"
+            :clearable="true"
+            class="shrink-0 w-52 lg:w-72"
+            @query-change="onIssueQueryChange"
+          />
 
-        <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
+          <span class="text-gray-200 dark:text-gray-700 select-none">|</span>
 
-        <AppComboboxInput
-          v-model="selectedTagName"
-          :options="availableTags"
-          placeholder="Tag"
-          :multiple="false"
-          :dark="true"
-          class="flex-1 min-w-[100px] md:w-32 lg:w-40"
-        />
+          <AppComboboxInput
+            v-model="selectedTagName"
+            :options="availableTags"
+            placeholder="Tag"
+            :multiple="false"
+            :dark="true"
+            :clearable="true"
+            class="shrink-0 w-24 lg:w-32"
+          />
+        </div>
       </div>
     </div>
 
@@ -285,3 +599,19 @@ onUnmounted(() => {
     </div>
   </header>
 </template>
+
+<style scoped>
+@keyframes desc-marquee {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  85%,
+  100% {
+    transform: translateX(var(--marquee-offset, 0px));
+  }
+}
+.desc-marquee {
+  animation: desc-marquee 4s ease-in-out infinite alternate;
+}
+</style>

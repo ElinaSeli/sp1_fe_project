@@ -60,7 +60,7 @@ export function useApiClient() {
         (err as { data?: { message?: string }; message?: string })?.data?.message ??
         (err as { message?: string })?.message ??
         'An unexpected error occurred'
-      return { data: null, error: message }
+      return { data: null, error: message, statusCode: status ?? null }
     }
   }
 

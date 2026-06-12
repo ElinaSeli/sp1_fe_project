@@ -48,7 +48,7 @@ async function onLogin() {
 
       await authStore.fetchUserProfile()
       await useWorkspacesStore().fetchWorkspaces()
-      await router.push('/')
+      await router.push('/time-entries')
     } else {
       errorMsg.value = 'Invalid response from server'
     }
