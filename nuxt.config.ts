@@ -29,9 +29,6 @@ export default defineNuxtConfig({
   routeRules: {
     '/api/**': {
       proxy: `${process.env.NUXT_BACKEND_URL}/api/**`
-    },
-    '/login': {
-      proxy: `${process.env.NUXT_BACKEND_URL}/login`
     }
   },
 
