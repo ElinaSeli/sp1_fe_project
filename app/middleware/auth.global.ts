@@ -26,7 +26,7 @@ export default defineNuxtRouteMiddleware((to) => {
     return navigateTo('/login')
   }
 
-  if (authStore.isAuthenticated && isPublicRoute) {
+  if (authStore.isAuthenticated && (isPublicRoute || to.path === '/')) {
     return navigateTo('/time-entries')
   }
 })

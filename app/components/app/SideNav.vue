@@ -81,8 +81,7 @@ const onLogout = async () => {
             :items="
               workspacesStore.workspaces.map((w) => ({
                 ...w,
-                label: w.name,
-                description: w.description || undefined
+                label: w.name
               }))
             "
             value-key="id"

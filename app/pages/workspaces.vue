@@ -7,18 +7,16 @@ const workspacesStore = useWorkspacesStore()
 const { workspaces, activeWorkspaceId, isLoading, error } = storeToRefs(workspacesStore)
 const toast = useToast()
 const confirm = useConfirm()
+const { formatDateShort: formatDate } = useDateFormat()
 
 // --- Create ---
 const isCreateOpen = ref(false)
-const createState = reactive<{ name: string; description: string }>({ name: '', description: '' })
+const createName = ref('')
 
 async function onCreateSubmit() {
-  if (!createState.name.trim()) return
+  if (!createName.value.trim()) return
 
-  const result = await workspacesStore.createWorkspace({
-    name: createState.name.trim(),
-    description: createState.description?.trim() || null
-  })
+  const result = await workspacesStore.createWorkspace({ name: createName.value.trim() })
 
   if (!result) {
     toast.add({
@@ -37,8 +35,43 @@ async function onCreateSubmit() {
     icon: 'i-lucide-check-circle'
   })
   isCreateOpen.value = false
-  createState.name = ''
-  createState.description = ''
+  createName.value = ''
+}
+
+// --- Edit ---
+// TODO: restrict to OWNER/ADMIN once membership roles are returned by the API
+const isEditOpen = ref(false)
+const editTarget = ref<{ id: string; name: string } | null>(null)
+const editName = ref('')
+
+function onEditOpen(ws: { id: string; name: string }) {
+  editTarget.value = ws
+  editName.value = ws.name
+  isEditOpen.value = true
+}
+
+async function onEditSubmit() {
+  if (!editTarget.value || !editName.value.trim()) return
+
+  const result = await workspacesStore.updateWorkspace(editTarget.value.id, editName.value.trim())
+
+  if (!result) {
+    toast.add({
+      title: 'Failed to rename workspace',
+      description: error.value ?? 'An unexpected error occurred.',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+    return
+  }
+
+  toast.add({
+    title: `Renamed to "${result.name}"`,
+    color: 'success',
+    icon: 'i-lucide-check-circle'
+  })
+  isEditOpen.value = false
+  editTarget.value = null
 }
 
 // --- Delete ---
@@ -79,16 +112,18 @@ function switchWorkspace(id: string) {
   })
 }
 
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
+const onCreateNew = () => {
+  isCreateOpen.value = true
 }
 
-onMounted(() => workspacesStore.fetchWorkspaces())
+onMounted(() => {
+  window.addEventListener('app:createNew', onCreateNew)
+  workspacesStore.fetchWorkspaces()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('app:createNew', onCreateNew)
+})
 </script>
 
 <template>
@@ -191,9 +226,6 @@ onMounted(() => workspacesStore.fetchWorkspaces())
           </div>
           <div class="min-w-0">
             <p class="font-semibold text-gray-900 dark:text-white truncate">{{ ws.name }}</p>
-            <p v-if="ws.description" class="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {{ ws.description }}
-            </p>
           </div>
         </div>
 
@@ -204,14 +236,22 @@ onMounted(() => workspacesStore.fetchWorkspaces())
           <span class="text-xs text-gray-400 dark:text-gray-500">
             Created {{ formatDate(ws.createdAt) }}
           </span>
-          <UButton
-            size="xs"
-            color="error"
-            variant="ghost"
-            icon="i-lucide-trash-2"
-            class="opacity-0 group-hover:opacity-100 transition-opacity"
-            @click.stop="onDelete(ws)"
-          />
+          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <UButton
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-pencil"
+              @click.stop="onEditOpen(ws)"
+            />
+            <UButton
+              size="xs"
+              color="error"
+              variant="ghost"
+              icon="i-lucide-trash-2"
+              @click.stop="onDelete(ws)"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -230,17 +270,9 @@ onMounted(() => workspacesStore.fetchWorkspaces())
           <form class="space-y-4" @submit.prevent="onCreateSubmit">
             <UFormField label="Workspace Name" name="name" required>
               <UInput
-                v-model="createState.name"
+                v-model="createName"
                 placeholder="e.g. My Team, Client Portal"
                 autofocus
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField label="Description" name="description">
-              <UInput
-                v-model="createState.description"
-                placeholder="Optional — what is this workspace for?"
                 class="w-full"
               />
             </UFormField>
@@ -250,13 +282,51 @@ onMounted(() => workspacesStore.fetchWorkspaces())
                 Cancel
               </UButton>
               <UButton
-                type="button"
+                type="submit"
                 color="primary"
                 :loading="isLoading"
-                :disabled="!createState.name.trim()"
-                @click="onCreateSubmit"
+                :disabled="!createName.trim()"
               >
                 Create Workspace
+              </UButton>
+            </div>
+          </form>
+        </UCard>
+      </template>
+    </UModal>
+
+    <!-- Edit Modal -->
+    <UModal v-model:open="isEditOpen">
+      <template #content>
+        <UCard>
+          <template #header>
+            <div class="flex items-center gap-3">
+              <UIcon name="i-lucide-pencil" class="text-primary-500" />
+              <h2 class="text-lg font-semibold">Rename Workspace</h2>
+            </div>
+          </template>
+
+          <form class="space-y-4" @submit.prevent="onEditSubmit">
+            <UFormField label="Workspace Name" name="name" required>
+              <UInput
+                v-model="editName"
+                placeholder="e.g. My Team, Client Portal"
+                autofocus
+                class="w-full"
+              />
+            </UFormField>
+
+            <div class="flex justify-end gap-3 pt-2">
+              <UButton type="button" color="neutral" variant="ghost" @click="isEditOpen = false">
+                Cancel
+              </UButton>
+              <UButton
+                type="submit"
+                color="primary"
+                :loading="isLoading"
+                :disabled="!editName.trim() || editName.trim() === editTarget?.name"
+              >
+                Save
               </UButton>
             </div>
           </form>

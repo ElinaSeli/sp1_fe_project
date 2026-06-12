@@ -469,13 +469,21 @@ const stopTracking = async () => {
   }
 }
 
+const taskInput = ref<{ focus: () => void } | null>(null)
+
+const focusTaskField = () => {
+  taskInput.value?.focus()
+}
+
 onMounted(() => {
   workspacesStore.fetchWorkspaces()
   timerStore.fetchActiveTimer()
+  window.addEventListener('app:focusTaskField', focusTaskField)
 })
 
 onUnmounted(() => {
   if (tickerInterval) clearInterval(tickerInterval)
+  window.removeEventListener('app:focusTaskField', focusTaskField)
 })
 </script>
 
@@ -579,22 +587,29 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Warning message if project and issue don't align -->
-      <div
-        v-if="
-          selectedIssueProjectName &&
-          timerStore.draftEntry.projectId &&
-          projects.find((p) => p.id === timerStore.draftEntry.projectId)?.name !==
-            selectedIssueProjectName
-        "
-        class="text-xs text-warning-500 dark:text-warning-400 mt-1 flex items-center gap-1.5 px-1 font-medium"
-      >
-        <UIcon name="i-lucide-alert-triangle" class="size-3.5 shrink-0" />
-        <span
-          >This task belongs to project "{{ selectedIssueProjectName }}", but active project is "{{
-            projects.find((p) => p.id === timerStore.draftEntry.projectId)?.name
-          }}".</span
-        >
+      <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
+
+      <!-- Group 2: Task + Tags -->
+      <div class="flex w-full md:w-auto items-center gap-1">
+        <AppComboboxInput
+          ref="taskInput"
+          v-model="activeIssueName"
+          :options="issues"
+          placeholder="Task"
+          :dark="true"
+          class="flex-1 min-w-[130px] md:w-32 lg:w-40"
+        />
+
+        <span class="text-gray-200 dark:text-gray-700 select-none hidden md:block">|</span>
+
+        <AppComboboxInput
+          v-model="selectedTagName"
+          :options="availableTags"
+          placeholder="Tag"
+          :multiple="false"
+          :dark="true"
+          class="flex-1 min-w-[100px] md:w-32 lg:w-40"
+        />
       </div>
     </div>
 

@@ -13,6 +13,7 @@ const workspacesStore = useWorkspacesStore()
 const { activeWorkspaceId } = storeToRefs(workspacesStore)
 const toast = useToast()
 const confirm = useConfirm()
+const { formatDate } = useDateFormat()
 
 const dialogOpen = ref(false)
 const editingEntry = ref<TimeEntry | null>(null)
@@ -117,12 +118,11 @@ const formatTimeRange = (start: string, end: string | null | undefined) => {
   return `${startStr} - ${endStr}`
 }
 
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr)
-  const today = new Date()
-  if (date.toDateString() === today.toDateString()) return 'Today'
-
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+// Get project color for a time entry
+function getProjectColor(projectId: string | null): string | null {
+  if (!projectId) return null
+  const project = projectsStore.projects.find((p) => p.id.toLowerCase() === projectId.toLowerCase())
+  return project?.color || null
 }
 
 const groupedEntries = computed(() => {
@@ -173,14 +173,34 @@ const groupedEntries = computed(() => {
           :class="{ 'border-t border-gray-100 dark:border-gray-800': index !== 0 }"
         >
           <div class="flex items-center gap-4 flex-1 min-w-0">
-            <div class="w-1 h-8 rounded-full bg-primary-500" />
+            <div
+              class="w-1 h-8 rounded-full"
+              :class="
+                getProjectColor(entry.projectId) ? 'project-colored-indicator' : 'bg-primary-500'
+              "
+              :style="
+                getProjectColor(entry.projectId)
+                  ? { '--project-color': getProjectColor(entry.projectId)! }
+                  : {}
+              "
+            />
             <div class="flex-1 min-w-0">
               <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                 {{ entry.description }}
               </p>
               <div class="flex items-center gap-2 mt-1">
                 <span
-                  class="text-[10px] font-bold text-primary-600 dark:text-primary-400 uppercase bg-primary-50 dark:bg-primary-950 px-1.5 py-0.5 rounded"
+                  class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
+                  :class="
+                    getProjectColor(entry.projectId)
+                      ? 'project-colored-badge'
+                      : 'bg-primary-50 dark:bg-primary-950 text-primary-600 dark:text-primary-400 border border-primary-100 dark:border-primary-900/50'
+                  "
+                  :style="
+                    getProjectColor(entry.projectId)
+                      ? { '--project-color': getProjectColor(entry.projectId)! }
+                      : {}
+                  "
                 >
                   {{
                     projectsStore.projects.find((p) => p.id === entry.projectId)?.name ||

@@ -54,13 +54,15 @@ export interface AuthResponse {
 export interface Workspace {
   id: string
   name: string
-  description?: string | null
   createdAt?: string | null
 }
 
 export interface CreateWorkspaceRequest {
   name: string
-  description?: string | null
+}
+
+export interface UpdateWorkspaceRequest {
+  name: string
 }
 
 // ---------------------------------------------------------------------------
@@ -72,6 +74,7 @@ export interface Project {
   workspaceId: string
   name: string
   color?: string | null
+  isSystem: boolean
   isExternal: boolean
   externalId?: string | null
   isSystem?: boolean
@@ -85,6 +88,7 @@ export interface CreateProjectRequest {
 export interface UpdateProjectRequest {
   name: string
   description?: string | null
+  color?: string | null
 }
 
 export interface ProjectListResponse {
@@ -228,7 +232,6 @@ export type KeybindingActionId =
   | 'focusTaskField'
   | 'focusDescField'
   | 'editLastEntry'
-  | 'newTimeEntry'
   | 'createNew'
   | 'toggleSidebar'
 
@@ -273,6 +276,14 @@ export interface ServiceResponse<T> {
   error: string | null
   /** HTTP status code — populated on error responses for specific handling (e.g. 504). */
   statusCode?: number | null
+}
+
+export interface PagedResponse<T> {
+  content?: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
 }
 
 // ---------------------------------------------------------------------------

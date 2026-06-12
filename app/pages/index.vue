@@ -1,10 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  middleware: [
-    function () {
-      return navigateTo('/time-entries')
-    }
-  ]
+  layout: 'dashboard'
 })
 </script>
 

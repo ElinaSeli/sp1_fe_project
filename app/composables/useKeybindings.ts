@@ -6,7 +6,14 @@ function buildKeyString(e: KeyboardEvent): string {
   if (e.altKey) parts.push('Alt')
   if (e.shiftKey) parts.push('Shift')
   if (e.metaKey) parts.push('Meta')
-  const key = e.key
+
+  let key = e.key
+  if (e.code.startsWith('Key')) {
+    key = e.code.slice(3)
+  } else if (e.code.startsWith('Digit')) {
+    key = e.code.slice(5)
+  }
+
   if (!['Control', 'Alt', 'Shift', 'Meta'].includes(key)) {
     parts.push(key.length === 1 ? key.toUpperCase() : key)
   }
@@ -46,17 +53,86 @@ function waitForModifiersUp(keyString: string): Promise<void> {
 }
 
 const ACTION_HANDLERS: Record<KeybindingActionId, () => void> = {
-  startTimer: () => console.warn('[keybinding] startTimer fired — TODO'),
-  saveTimer: () => console.warn('[keybinding] saveTimer fired — TODO'),
-  stopTimer: () => console.warn('[keybinding] stopTimer fired — TODO'),
-  resumeLast: () => console.warn('[keybinding] resumeLast fired — TODO'),
+  startTimer: () => {
+    const timerStore = useTimerStore()
+    const toast = useToast()
+    if (timerStore.isRunning) {
+      toast.add({ title: 'Timer is already running', color: 'warning' })
+      return
+    }
+    timerStore
+      .startTimer()
+      .then(() => {
+        toast.add({ title: 'Timer started', color: 'success' })
+      })
+      .catch((err) => {
+        toast.add({ title: 'Failed to start timer', description: err.message, color: 'error' })
+      })
+  },
+  saveTimer: () => {
+    const timerStore = useTimerStore()
+    const toast = useToast()
+    if (!timerStore.isRunning) {
+      toast.add({ title: 'No active timer to stop', color: 'warning' })
+      return
+    }
+    timerStore
+      .stopTimer()
+      .then(() => {
+        toast.add({ title: 'Timer stopped & saved', color: 'success' })
+      })
+      .catch((err) => {
+        toast.add({ title: 'Failed to stop timer', description: err.message, color: 'error' })
+      })
+  },
+  stopTimer: () => {
+    const timerStore = useTimerStore()
+    const toast = useToast()
+    if (!timerStore.isRunning) {
+      toast.add({ title: 'No active timer to cancel', color: 'warning' })
+      return
+    }
+    timerStore
+      .cancelTimer()
+      .then((success) => {
+        if (success) {
+          toast.add({ title: 'Timer discarded', color: 'success' })
+        } else {
+          toast.add({ title: 'Failed to cancel timer', color: 'error' })
+        }
+      })
+      .catch((err) => {
+        toast.add({ title: 'Failed to cancel timer', description: err.message, color: 'error' })
+      })
+  },
+  resumeLast: () => {
+    const timerStore = useTimerStore()
+    const toast = useToast()
+    if (timerStore.rawEntries.length === 0) {
+      toast.add({ title: 'No recent time entries found', color: 'warning' })
+      return
+    }
+    const lastEntry = timerStore.rawEntries[0]
+    if (!lastEntry) return
+    timerStore
+      .resumeEntry(lastEntry.id)
+      .then((success) => {
+        if (success) {
+          toast.add({ title: 'Timer resumed', color: 'success' })
+        } else {
+          toast.add({ title: 'Failed to resume timer', color: 'error' })
+        }
+      })
+      .catch((err) => {
+        toast.add({ title: 'Failed to resume timer', description: err.message, color: 'error' })
+      })
+  },
   goToDashboard: () => {
     navigateTo('/time-entries')
   },
   focusTaskField: () => window.dispatchEvent(new CustomEvent('app:focusTaskField')),
   focusDescField: () => document.querySelector<HTMLElement>('[data-focus="desc-field"]')?.focus(),
   editLastEntry: () => window.dispatchEvent(new CustomEvent('app:editLastTimeEntry')),
-  newTimeEntry: () => window.dispatchEvent(new CustomEvent('app:openNewTimeEntry')),
   createNew: () => window.dispatchEvent(new CustomEvent('app:createNew')),
   toggleSidebar: () => window.dispatchEvent(new CustomEvent('app:toggleSidebar'))
 }

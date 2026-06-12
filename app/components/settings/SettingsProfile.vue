@@ -1,5 +1,11 @@
 <script setup lang="ts">
 const authStore = useAuthStore()
+const { dateFormat, setFormat, previewFormatted } = useDateFormat()
+
+const dateFormatOptions = [
+  { value: 'american' as const, label: 'MM/DD/YYYY' },
+  { value: 'european' as const, label: 'DD/MM/YYYY' }
+]
 
 const account = reactive({
   firstName: '',
@@ -132,7 +138,7 @@ function changePassword() {
         </div>
       </template>
 
-      <div class="space-y-4 max-w-sm">
+      <div class="space-y-6 max-w-sm">
         <UFormField label="Primary Theme Color">
           <div class="flex flex-wrap gap-3 mt-2 items-center">
             <button
@@ -162,6 +168,36 @@ function changePassword() {
                 class="w-4 h-4"
               />
             </button>
+          </div>
+        </UFormField>
+
+        <!-- Date Format -->
+        <UFormField label="Date Format">
+          <div class="mt-2 space-y-2">
+            <div
+              class="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 w-fit"
+            >
+              <button
+                v-for="opt in dateFormatOptions"
+                :key="opt.value"
+                type="button"
+                class="px-4 py-2 text-sm font-medium transition-colors focus:outline-none"
+                :class="
+                  dateFormat === opt.value
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                "
+                @click="setFormat(opt.value)"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 dark:text-gray-500">
+              Preview:
+              <span class="font-semibold text-gray-600 dark:text-gray-300">{{
+                previewFormatted
+              }}</span>
+            </p>
           </div>
         </UFormField>
       </div>

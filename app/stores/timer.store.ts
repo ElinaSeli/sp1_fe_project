@@ -134,9 +134,7 @@ export const useTimerStore = defineStore(
       )
       if (response.data) {
         // Defensive: Extract .content if the backend returns a PagedResponse, otherwise fallback to array
-        const listData = Array.isArray(response.data)
-          ? response.data
-          : (response.data as Record<string, unknown>).content
+        const listData = Array.isArray(response.data) ? response.data : response.data.content
         if (Array.isArray(listData)) {
           rawEntries.value = listData as TimeEntry[]
           entries.value = (listData as TimeEntry[]).map((e) => ({
@@ -447,6 +445,30 @@ export const useTimerStore = defineStore(
       }
     }
 
+    async function cancelTimer(): Promise<boolean> {
+      const workspacesStore = useWorkspacesStore()
+      if (!workspacesStore.activeWorkspaceId) throw new Error('No active workspace')
+
+      isStopping.value = true
+      try {
+        const response = await timerService.stop(workspacesStore.activeWorkspaceId)
+        if (response.data) {
+          await timeEntriesService.remove(workspacesStore.activeWorkspaceId, response.data.id)
+          isRunning.value = false
+          startTimestamp.value = null
+          activeEntryId.value = null
+          resetDraft()
+          return true
+        }
+        return false
+      } catch (err) {
+        console.error('Failed to cancel timer:', err)
+        return false
+      } finally {
+        isStopping.value = false
+      }
+    }
+
     async function createEntry(payload: CreateTimeEntryRequest): Promise<TimeEntry | null> {
       const workspacesStore = useWorkspacesStore()
       if (!workspacesStore.activeWorkspaceId) return null
@@ -609,6 +631,7 @@ export const useTimerStore = defineStore(
       fetchActiveTimer,
       startTimer,
       stopTimer,
+      cancelTimer,
       createEntry,
       updateEntry,
       deleteEntry,
