@@ -25,6 +25,9 @@ const loading = ref(false)
 const errorMsg = ref<string | null>(null)
 const success = ref(false)
 
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+
 const fieldErrors = ref<{ [k: string]: string | undefined }>({
   firstName: undefined,
   username: undefined,
@@ -124,24 +127,46 @@ async function onRegister() {
       <UFormField label="Password" :error="fieldErrors.password" required>
         <UInput
           v-model="form.password"
-          type="password"
+          :type="showPassword ? 'text' : 'password'"
           placeholder="••••••••"
           icon="i-lucide-lock"
           autocomplete="new-password"
           class="w-full"
-        />
+        >
+          <template #trailing>
+            <UButton
+              :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              variant="ghost"
+              color="neutral"
+              size="xs"
+              tabindex="-1"
+              @click="showPassword = !showPassword"
+            />
+          </template>
+        </UInput>
       </UFormField>
 
       <!-- Confirm Password -->
       <UFormField label="Confirm Password" :error="fieldErrors.confirmPassword" required>
         <UInput
           v-model="form.confirmPassword"
-          type="password"
+          :type="showConfirmPassword ? 'text' : 'password'"
           placeholder="••••••••"
           icon="i-lucide-check-circle"
           autocomplete="new-password"
           class="w-full"
-        />
+        >
+          <template #trailing>
+            <UButton
+              :icon="showConfirmPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              variant="ghost"
+              color="neutral"
+              size="xs"
+              tabindex="-1"
+              @click="showConfirmPassword = !showConfirmPassword"
+            />
+          </template>
+        </UInput>
       </UFormField>
 
       <UAlert v-if="errorMsg" color="error" variant="soft" :description="errorMsg" />
