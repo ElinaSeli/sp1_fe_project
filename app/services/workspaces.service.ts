@@ -8,15 +8,13 @@
 import type {
   Workspace,
   CreateWorkspaceRequest,
+  UpdateWorkspaceRequest,
   MembershipResponse,
   ServiceResponse
 } from '~/types'
 import { useApiClient } from '~/composables/useApiClient'
 
 export const workspacesService = {
-  /**
-   * Fetch all workspaces for the currently authenticated user.
-   */
   async getAll(): Promise<ServiceResponse<Workspace[]>> {
     const { request } = useApiClient()
     return request<Workspace[]>('/api/workspaces')
@@ -39,6 +37,16 @@ export const workspacesService = {
       method: 'POST',
       body: payload
     })
+  },
+
+  async update(id: string, payload: UpdateWorkspaceRequest): Promise<ServiceResponse<Workspace>> {
+    const { request } = useApiClient()
+    return request<Workspace>(`/api/workspaces/${id}`, { method: 'PATCH', body: payload })
+  },
+
+  async delete(id: string): Promise<ServiceResponse<null>> {
+    const { request } = useApiClient()
+    return request<null>(`/api/workspaces/${id}`, { method: 'DELETE' })
   },
 
   /**

@@ -41,10 +41,10 @@ export interface MembershipResponse {
 
 export interface AuthResponse {
   username: string
-  roles: string[]
   access_token: string
   token_type: string
-  expires_in: number
+  expires_in?: number | null
+  refresh_token?: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -54,29 +54,79 @@ export interface AuthResponse {
 export interface Workspace {
   id: string
   name: string
-  description?: string | null
   createdAt?: string | null
 }
 
 export interface CreateWorkspaceRequest {
   name: string
-  description?: string | null
+}
+
+export interface UpdateWorkspaceRequest {
+  name: string
 }
 
 // ---------------------------------------------------------------------------
-// Project / Task / Tag
+// Project / Issue / Tag  (aligned with Micronaut backend DTOs)
 // ---------------------------------------------------------------------------
 
 export interface Project {
   id: string
+  workspaceId: string
   name: string
-  color?: string
+  color?: string | null
+  isSystem?: boolean
+  isExternal: boolean
+  externalId?: string | null
+}
+
+export interface CreateProjectRequest {
+  name: string
+  color?: string | null
+}
+
+export interface UpdateProjectRequest {
+  name: string
+  description?: string | null
+  color?: string | null
+}
+
+export interface ProjectListResponse {
+  data: Project[]
+  error?: string | null
+}
+
+export interface Issue {
+  id: string
+  workspaceId: string
+  projectId: string
+  name: string
+  isSystem?: boolean
+  externalId?: string | null
+}
+
+export interface CreateIssueRequest {
+  projectId: string
+  name: string
 }
 
 export interface Tag {
   id: string
+  workspaceId: string
+  projectId: string
   name: string
+  color?: string | null
+
+  externalId?: string | null
 }
+
+export interface CreateTagRequest {
+  projectId: string
+  name: string
+  color?: string | null
+}
+
+/** @deprecated Use Issue instead — kept for timer store backward-compat */
+export type Task = Issue
 
 // ---------------------------------------------------------------------------
 // Time Entries
@@ -104,8 +154,11 @@ export interface TimeEntry {
 }
 
 export interface CreateTimeEntryRequest {
-  projectId: string
+  projectId?: string | null
+  /** Local UUID issue — mutually exclusive with externalIssueId. */
   issueId?: string | null
+  /** Redmine issue ID from live search — mutually exclusive with issueId. */
+  externalIssueId?: string | null
   description?: string | null
   timeStart: string // ISO date-time
   timeEnd: string // ISO date-time
@@ -113,12 +166,21 @@ export interface CreateTimeEntryRequest {
 }
 
 export interface StartTimerRequest {
-  projectId: string
+  projectId?: string | null
   issueId?: string | null
+  /** Redmine issue ID — mutually exclusive with issueId. */
+  externalIssueId?: string | null
   description?: string | null
+  /** Tags to associate with the entry at start time. */
+  tagIds?: string[]
 }
 
 export interface UpdateTimeEntryRequest {
+  projectId?: string | null
+  /** Local UUID issue — mutually exclusive with externalIssueId. */
+  issueId?: string | null
+  /** Redmine issue ID from live search — mutually exclusive with issueId. */
+  externalIssueId?: string | null
   description?: string | null
   timeStart: string
   timeEnd: string
@@ -131,12 +193,29 @@ export interface UpdateTimeEntryRequest {
 
 export interface Integration {
   id: string
+  name: string
   userId: string
   workspaceId: string
   url: string
   apiKey: string
   status: 'active' | 'inactive'
   createdAt: string
+}
+
+export interface IntegrationRequest {
+  name: string
+  url: string
+  apiKey: string
+}
+
+export interface TestConnectionRequest {
+  url: string
+  apiKey: string
+}
+
+export interface TestConnectionResponse {
+  success: boolean
+  message: string
 }
 
 // ---------------------------------------------------------------------------
@@ -147,14 +226,44 @@ export type KeybindingActionId =
   | 'startTimer'
   | 'saveTimer'
   | 'stopTimer'
-  | 'newTimeEntry'
-  | 'goToDashboard'
   | 'resumeLast'
+  | 'goToDashboard'
+  | 'focusTaskField'
+  | 'focusDescField'
+  | 'editLastEntry'
+  | 'createNew'
+  | 'toggleSidebar'
+
+export type KeybindingCategory = 'timer' | 'navigation' | 'timeEntry' | 'special'
 
 export interface KeybindingAction {
   id: KeybindingActionId
   label: string
   description: string
+  category: KeybindingCategory
+}
+
+export interface KeybindingBinding {
+  key: string
+  enabled: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Issues — live search from Redmine (not stored locally)
+// ---------------------------------------------------------------------------
+
+/**
+ * Result from GET /api/workspaces/{id}/issues/search.
+ * Issues are never persisted locally — always searched live from Redmine.
+ * project_id is our local UUID (resolved by backend from Redmine's project.id).
+ */
+export interface IssueSearchResult {
+  external_id: number
+  issue_title: string
+  /** Our local workspace-scoped UUID for the project — null if not synced locally. */
+  project_id: string | null
+  project_name: string
+  project_external_id: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -164,4 +273,37 @@ export interface KeybindingAction {
 export interface ServiceResponse<T> {
   data: T | null
   error: string | null
+  /** HTTP status code — populated on error responses for specific handling (e.g. 504). */
+  statusCode?: number | null
+}
+
+export interface PagedResponse<T> {
+  content?: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+// ---------------------------------------------------------------------------
+// View models
+// ---------------------------------------------------------------------------
+
+export interface TimeEntryViewModel {
+  id: string
+  description: string
+  projectId: string | null
+  /** Preserved from raw TimeEntry so the edit dialog and resume flow can read it. */
+  issueId: string | null
+  /**
+   * Display label for the issue. Populated locally when we know it (e.g. after
+   * stopping a timer or creating an entry). Empty after page refresh — issue
+   * titles are not stored in the DB, they come from live Redmine search.
+   */
+  issueTitle: string
+  /** Preserved from raw TimeEntry so tags are visible in the list and edit dialog. */
+  tagIds: string[]
+  duration: number
+  timeStart: string
+  timeEnd: string | null
 }

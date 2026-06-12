@@ -1,8 +1,8 @@
 image: node:22-alpine
 
 variables:
-  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
-  GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  SONAR_USER_HOME: '${CI_PROJECT_DIR}/.sonar' # Defines the location of the analysis task cache
+  GIT_DEPTH: '0' # Tells git to fetch all the branches of the project, required by the analysis task
 
 stages:
   - test
@@ -60,7 +60,7 @@ sonarqube-check:
   stage: sonarqube-check
   image:
     name: sonarsource/sonar-scanner-cli:11
-    entrypoint: [""]
+    entrypoint: ['']
   script:
     - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}"
   allow_failure: true
@@ -74,7 +74,7 @@ sonarqube-vulnerability-report:
   stage: sonarqube-vulnerability-report
   image:
     name: sonarsource/sonar-scanner-cli:11
-    entrypoint: [""]
+    entrypoint: ['']
   script:
     - 'curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=SP1_seliveli&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json'
   allow_failure: true
@@ -93,7 +93,7 @@ dockerize_frontend:
   stage: dockerize
   image:
     name: gcr.io/kaniko-project/executor:v1.22.0-debug
-    entrypoint: [""]
+    entrypoint: ['']
   needs:
     - frontend_build
   script:
@@ -104,7 +104,7 @@ dockerize_frontend:
       --destination "${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA}"
       --destination "${CI_REGISTRY_IMAGE}/frontend:latest"
   rules:
-    - if: $CI_COMMIT_BRANCH == 'main' || $CI_COMMIT_BRANCH == 'develop'
+    - if: $CI_COMMIT_BRANCH == 'main'
 
 # ── 4. Frontend deploy na AWS ───────────────
 deploy_frontend_aws:
@@ -128,4 +128,4 @@ deploy_frontend_aws:
       docker run -d --name frontend-app -p 3000:3000 --restart unless-stopped --env-file /home/ubuntu/.env.frontend ${CI_REGISTRY_IMAGE}/frontend:latest
       "
   rules:
-    - if: $CI_COMMIT_BRANCH == 'main' || $CI_COMMIT_BRANCH == 'develop'
+    - if: $CI_COMMIT_BRANCH == 'main'

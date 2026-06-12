@@ -1,18 +1,87 @@
-@import "tailwindcss";
-@import "@nuxt/ui";
+@import 'tailwindcss';
+@import '@nuxt/ui';
 
 @theme static {
   --font-sans: 'Public Sans', sans-serif;
 
-  --color-green-50: #EFFDF5;
-  --color-green-100: #D9FBE8;
-  --color-green-200: #B3F5D1;
-  --color-green-300: #75EDAE;
-  --color-green-400: #00DC82;
-  --color-green-500: #00C16A;
-  --color-green-600: #00A155;
-  --color-green-700: #007F45;
+  --color-green-50: #effdf5;
+  --color-green-100: #d9fbe8;
+  --color-green-200: #b3f5d1;
+  --color-green-300: #75edae;
+  --color-green-400: #00dc82;
+  --color-green-500: #00c16a;
+  --color-green-600: #00a155;
+  --color-green-700: #007f45;
   --color-green-800: #016538;
-  --color-green-900: #0A5331;
-  --color-green-950: #052E16;
+  --color-green-900: #0a5331;
+  --color-green-950: #052e16;
+}
+
+/* Project Dynamic Styling */
+.project-colored-badge {
+  --project-color-fallback: var(--color-primary-500);
+  --color: var(--project-color, var(--project-color-fallback));
+
+  color: color-mix(in srgb, var(--color) 85%, black);
+  background-color: color-mix(in srgb, var(--color) 8%, white);
+  border: 1px solid color-mix(in srgb, var(--color) 20%, white);
+}
+
+.dark .project-colored-badge {
+  color: color-mix(in srgb, var(--color) 85%, white);
+  background-color: color-mix(in srgb, var(--color) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color) 22%, transparent);
+}
+
+.project-colored-indicator {
+  --project-color-fallback: var(--color-primary-500);
+  background-color: var(--project-color, var(--project-color-fallback));
+}
+
+.project-colored-entry {
+  --project-color-fallback: var(--color-primary-500);
+  --color: var(--project-color, var(--project-color-fallback));
+
+  border-left: 3px solid var(--color);
+  border-top: 1px solid color-mix(in srgb, var(--color) 20%, white);
+  border-right: 1px solid color-mix(in srgb, var(--color) 20%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--color) 20%, white);
+  background-color: color-mix(in srgb, var(--color) 8%, white);
+  color: #111827;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.project-colored-entry:hover {
+  border-color: color-mix(in srgb, var(--color) 50%, white);
+  border-left-color: var(--color);
+  background-color: color-mix(in srgb, var(--color) 12%, white);
+}
+
+.project-colored-entry span,
+.project-colored-entry div {
+  color: inherit;
+}
+
+.project-colored-entry .font-bold {
+  color: color-mix(in srgb, var(--color) 85%, black);
+}
+
+.dark .project-colored-entry {
+  border-top-color: color-mix(in srgb, var(--color) 20%, transparent);
+  border-right-color: color-mix(in srgb, var(--color) 20%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--color) 20%, transparent);
+  background-color: color-mix(in srgb, var(--color) 12%, transparent);
+  color: #f3f4f6;
+}
+
+.dark .project-colored-entry:hover {
+  border-color: color-mix(in srgb, var(--color) 55%, transparent);
+  border-left-color: var(--color);
+  background-color: color-mix(in srgb, var(--color) 18%, transparent);
+}
+
+.dark .project-colored-entry .font-bold {
+  color: color-mix(in srgb, var(--color) 85%, white);
 }

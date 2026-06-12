@@ -17,8 +17,17 @@ const form = ref({
 const loading = ref(false)
 const errorMsg = ref<string | null>(null)
 
+const fieldErrors = ref<{ username?: string; password?: string }>({})
+
+function validateFields(): boolean {
+  fieldErrors.value.username = form.value.username.trim() ? undefined : 'Username is required'
+  fieldErrors.value.password = form.value.password ? undefined : 'Password is required'
+  return !fieldErrors.value.username && !fieldErrors.value.password
+}
+
 async function onLogin() {
   if (loading.value) return
+  if (!validateFields()) return
 
   errorMsg.value = null
   loading.value = true
@@ -34,16 +43,12 @@ async function onLogin() {
         errorMsg.value = response.error
       }
     } else if (response.data?.access_token) {
-      authStore.setSession(response.data.access_token, response.data.expires_in)
+      authStore.setSession(response.data.access_token, response.data.expires_in ?? undefined)
       await nextTick()
 
-      const profileResponse = await authStore.fetchUserProfile()
-
-      if (profileResponse.error) {
-        errorMsg.value = 'Failed to load user profile: ' + profileResponse.error
-      } else {
-        await router.push('/')
-      }
+      await authStore.fetchUserProfile()
+      await useWorkspacesStore().fetchWorkspaces()
+      await router.push('/time-entries')
     } else {
       errorMsg.value = 'Invalid response from server'
     }
@@ -62,8 +67,8 @@ async function onLogin() {
       <h1 class="text-xl font-semibold text-center text-gray-900 dark:text-white">Sign in</h1>
     </template>
 
-    <form class="flex flex-col gap-4" @submit.prevent="onLogin">
-      <UFormField label="Username">
+    <form class="flex flex-col gap-4" novalidate @submit.prevent="onLogin">
+      <UFormField label="Username" :error="fieldErrors.username">
         <UInput
           v-model="form.username"
           placeholder="Enter your username"
@@ -74,12 +79,7 @@ async function onLogin() {
         />
       </UFormField>
 
-      <UFormField label="Password">
-        <template #hint>
-          <NuxtLink to="/forgot-password" class="text-xs text-primary-500 hover:underline">
-            Forgot?
-          </NuxtLink>
-        </template>
+      <UFormField label="Password" :error="fieldErrors.password">
         <UInput
           v-model="form.password"
           type="password"
@@ -90,15 +90,13 @@ async function onLogin() {
         />
       </UFormField>
 
-      <UAlert
-        v-if="errorMsg"
-        icon="i-lucide-alert-circle"
-        color="error"
-        variant="soft"
-        :description="errorMsg"
-      />
+      <UAlert v-if="errorMsg" color="error" variant="soft" :description="errorMsg" />
 
       <UButton type="submit" color="primary" block :loading="loading"> Sign in </UButton>
+
+      <NuxtLink to="/forgot-password" class="text-xs text-primary-500 hover:underline text-center">
+        Forgot password?
+      </NuxtLink>
     </form>
 
     <template #footer>

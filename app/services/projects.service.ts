@@ -5,50 +5,55 @@
  * Communicates with the Micronaut backend at /api/workspaces/:workspaceId/projects/*.
  */
 
-import type { Project, ServiceResponse } from '~/types'
+import type {
+  Project,
+  CreateProjectRequest,
+  UpdateProjectRequest,
+  ProjectListResponse,
+  ServiceResponse
+} from '~/types'
 import { useApiClient } from '~/composables/useApiClient'
 
 export const projectsService = {
   /**
    * Fetch all projects for a given workspace.
    */
-  async getAll(workspaceId: string): Promise<ServiceResponse<Project[]>> {
+  async getAll(workspaceId: string): Promise<ServiceResponse<ProjectListResponse>> {
     const { request } = useApiClient()
-    return request<Project[]>(`/api/workspaces/${workspaceId}/projects`)
+    return request<ProjectListResponse>(`/api/workspaces/${workspaceId}/projects`)
   },
 
   /**
-   * Create a new project inside a workspace.
+   * Create a new local project inside a workspace.
    */
   async create(
     workspaceId: string,
-    name: string,
-    color?: string
+    payload: CreateProjectRequest
   ): Promise<ServiceResponse<Project>> {
     const { request } = useApiClient()
     return request<Project>(`/api/workspaces/${workspaceId}/projects`, {
       method: 'POST',
-      body: { name, color }
+      body: payload
     })
   },
 
   /**
-   * Update an existing project's name or color.
+   * Update an existing local project (only allowed for non-imported projects).
    */
   async update(
     workspaceId: string,
     projectId: string,
-    patch: Partial<Pick<Project, 'name' | 'color'>>
+    payload: UpdateProjectRequest
   ): Promise<ServiceResponse<Project>> {
     const { request } = useApiClient()
     return request<Project>(`/api/workspaces/${workspaceId}/projects/${projectId}`, {
       method: 'PATCH',
-      body: patch
+      body: payload
     })
   },
 
   /**
-   * Delete a project from a workspace.
+   * Delete a local project (only allowed for non-imported projects).
    */
   async remove(workspaceId: string, projectId: string): Promise<ServiceResponse<null>> {
     const { request } = useApiClient()

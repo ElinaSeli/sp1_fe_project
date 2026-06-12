@@ -8,5 +8,7 @@ export { authService } from './auth.service'
 export { timeEntriesService } from './timeEntries.service'
 export { workspacesService } from './workspaces.service'
 export { timerService } from './timer.service'
-// Note: projectsService is a placeholder until the backend adds dedicated project endpoints
 export { projectsService } from './projects.service'
+export { tagsService } from './tags.service'
+export { issuesService } from './issues.service'
+export { integrationService } from './integration.service'
