@@ -18,6 +18,7 @@ const loading = ref(false)
 const errorMsg = ref<string | null>(null)
 
 const fieldErrors = ref<{ username?: string; password?: string }>({})
+const showPassword = ref(false)
 
 function validateFields(): boolean {
   fieldErrors.value.username = form.value.username.trim() ? undefined : 'Username is required'
@@ -82,12 +83,23 @@ async function onLogin() {
       <UFormField label="Password" :error="fieldErrors.password">
         <UInput
           v-model="form.password"
-          type="password"
+          :type="showPassword ? 'text' : 'password'"
           placeholder="••••••••"
           icon="i-lucide-lock"
           autocomplete="current-password"
           class="w-full"
-        />
+        >
+          <template #trailing>
+            <UButton
+              :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              variant="ghost"
+              color="neutral"
+              size="xs"
+              tabindex="-1"
+              @click="showPassword = !showPassword"
+            />
+          </template>
+        </UInput>
       </UFormField>
 
       <UAlert v-if="errorMsg" color="error" variant="soft" :description="errorMsg" />
