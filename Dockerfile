@@ -1,17 +1,7 @@
-FROM node:22-alpine3.21
+FROM nginx:alpine
 
-RUN addgroup -S app && adduser -S app -G app
+COPY .output/public /usr/share/nginx/html
 
-WORKDIR /app
+EXPOSE 80
 
-COPY .output /app/.output
-
-RUN chown -R app:app /app
-
-USER app
-
-EXPOSE 3000
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD wget -qO- http://localhost:3000 || exit 1
-
-CMD ["node", ".output/server/index.mjs"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s CMD wget -qO- http://localhost || exit 1
