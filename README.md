@@ -1,10 +1,10 @@
 # ⏱️ Time Tracking Platform — Frontend
 
-> A production-deployed, keyboard-first time-tracking platform built as an advanced alternative to Toggl Track. Features native Redmine integration, offline-first sync, a Tauri desktop app, and a full CI/CD pipeline from lint to AWS deployment.
+> A production-deployed, keyboard-first time-tracking platform built as an alternative to Toggl Track. Features native Redmine integration, offline-first sync, (in progress )a Tauri desktop app, and a full CI/CD pipeline from lint to AWS deployment.
 
-<!-- Replace with a real screenshot of the running app -->
+<img width="1440" height="779" alt="image" src="https://github.com/user-attachments/assets/5b1f50dd-05be-4572-a1be-ee6fda4c817a" />
 
-![App Screenshot](docs/image.png)
+
 
 [![Vue](https://img.shields.io/badge/Vue-3-4FC08D?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
 [![Nuxt](https://img.shields.io/badge/Nuxt-4-00DC82?logo=nuxtdotjs&logoColor=white)](https://nuxt.com/)
@@ -16,7 +16,7 @@
 
 ---
 
-## 🎯 About This Project
+## About This Project
 
 A time-tracking platform developed as a university engineering project (SP1) at **FIT CTU Prague** by a 6-person team. It solves two real problems with commercial tools like Toggl:
 
@@ -27,36 +27,34 @@ The system is **currently deployed and running** on AWS. This repository is the 
 
 ---
 
-## 👩‍💻 My Role & Contributions
+## My contributions
 
 Within the 6-person team, I served as **Web Specialist & UI/UX Designer** and was the primary owner of this frontend repository.
 
 | Responsibility              | Details                                                                                                                                          |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **UI/UX Design**            | Designed the interface around "efficiency above all else" — fewer clicks than Toggl, full keyboard navigation via Tab/Enter and global shortcuts |
-| **Frontend Architecture**   | Built the frontend from scratch: Nuxt 4, Vue 3, Pinia state management, TypeScript throughout                                                    |
-| **Cross-Platform Delivery** | Integrated Tauri to ship a native desktop app with system-tray support and idle detection                                                        |
+| **UI/UX Design**            | Designed the interface. Focused on the efficiency: fewer clicks than Toggl, full keyboard navigation via Tab/Enter and global shortcuts |
+| **Frontend Architecture**   | Built the frontend: Nuxt 4, Vue 3, Pinia state management, TypeScript                                                     |
 | **Component Engineering**   | Built accessible, reusable components with TailwindCSS and Nuxt UI                                                                               |
-| **CI/CD Pipeline**          | Designed and owns the full GitLab CI pipeline: lint → type-check → test coverage → SonarQube → Docker → AWS                                      |
-| **Process & Workflow**      | Authored [CONTRIBUTING.md](CONTRIBUTING.md) — enforced branch naming, mandatory code review, and CI-green-before-merge rules                     |
-| **Backend Coordination**    | Defined REST API contracts with the Kotlin/Micronaut backend team; coordinated frontend↔backend integration for offline-first behavior           |
+| **CI/CD Pipeline**          | Designed thel GitLab CI pipeline: lint → type-check → test coverage → SonarQube → Docker → AWS                                      |
+| **Process & Workflow**      | Authored [CONTRIBUTING.md](CONTRIBUTING.md) - enforced branch naming, mandatory code review, and before merge rules                     |
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-- **⌨️ Keyboard-First UX** — Full Tab/Enter navigation, global shortcuts, command palette — designed to never require a mouse
-- **🔗 Redmine Integration** — Search and link Redmine issues directly from the timer widget; no tab-switching
-- **📱 Cross-Platform Sync** — Start a timer on web, stop it on desktop; data syncs in real time via the REST API
-- **⏺️ Timer & Manual Modes** — Classic start/stop timer _and_ a manual entry mode for retroactive logging
-- **✈️ Offline-First** — Track without internet; auto-syncs to PostgreSQL backend when connectivity returns
-- **🖥️ Desktop Idle Detection** — Alerts you when a timer has been running while you were away from the keyboard
-- **🍅 Focus Tools** — Built-in Pomodoro timer to structure focused work sessions
-- **🗂️ Full Organization** — Projects, Clients, Tags, and Colors for structured time reporting
+- **Keyboard-First UX** — Full Tab/Enter navigation, global shortcuts, command palette — designed to never require a mouse
+- **Redmine Integration** — Search and link Redmine issues directly from the timer widget; no tab-switching
+- **Cross-Platform Sync** — Start a timer on web, stop it on desktop; data syncs in real time via the REST API
+- **Timer & Manual Modes** — Classic start/stop timer _and_ a manual entry mode for retroactive logging
+- **Offline-First** — Track without internet; auto-syncs to PostgreSQL backend when connectivity returns
+- **Desktop Idle Detection** — Alerts you when a timer has been running while you were away from the keyboard
+- **Focus Tools** — Built-in Pomodoro timer to structure focused work sessions
+- **Full Organization** — Projects, Clients, Tags, and Colors for structured time reporting
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -79,15 +77,10 @@ Within the 6-person team, I served as **Web Specialist & UI/UX Designer** and wa
 ```
 
 **Frontend stack:** Nuxt 4 · Vue 3 · Pinia · TypeScript · TailwindCSS · Nuxt UI  
-**Desktop:** Tauri 2 (Rust) wrapping the Nuxt app  
 **Quality:** ESLint · Prettier · Husky (pre-commit hooks) · Vitest · SonarQube SAST  
 **CI/CD:** GitLab CI → Kaniko Docker build → AWS EC2 via SSH
 
 ---
-
-## 🔄 Development Lifecycle (SDLC)
-
-This project followed a professional team software development lifecycle with enforced quality gates at every stage.
 
 ### Branching Strategy — GitHub Flow
 
@@ -97,12 +90,6 @@ main          ← production-only, protected, auto-deploys to AWS
        └─ feature/*, fix/*, chore/*   ← all work happens here
 ```
 
-**Rules (enforced via branch protection + CI):**
-
-- ❌ No direct pushes to `develop` or `main` — ever
-- ✅ All changes go through a **Merge Request**
-- ✅ Requires **approval from a second team member** (mandatory code review)
-- ✅ CI pipeline must be **green** before merge is allowed
 
 ### CI/CD Pipeline (GitLab CI)
 
@@ -134,20 +121,19 @@ This guarantees the CI lint/format stage never fails due to style issues.
 
 ---
 
-## 🧪 Testing Strategy
+## Testing Strategy
 
 | Type                | Tool                       | What's Tested                                              |
 | ------------------- | -------------------------- | ---------------------------------------------------------- |
 | **Unit tests**      | Vitest                     | Pinia stores, composables, utility functions               |
 | **Component tests** | Vue Test Utils + happy-dom | Component rendering and interactions                       |
 | **Coverage**        | `@vitest/coverage-v8`      | Coverage report generated on every CI run                  |
-| **E2E tests**       | Playwright                 | Key user flows (timer start/stop, login, time entry)       |
 | **Type safety**     | `nuxt typecheck` (vue-tsc) | Full TypeScript checking across all `.vue` and `.ts` files |
 | **SAST**            | SonarQube                  | Static security analysis on every MR and `main` push       |
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -223,7 +209,7 @@ sp1_fe_project/
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request. Key rules:
 
@@ -231,8 +217,3 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
 - All changes require a Merge Request + peer code review
 - CI must be green before merge
 
----
-
-## 📜 License
-
-This project is licensed under the [MIT License](LICENSE).
