@@ -1,3 +1,0 @@
-- [DA - Automatická synchronizace](DA%20-%20Automatická%20synchronizace.md)
-- [DA - Ruční synchronizace](DA%20-%20Ruční%20synchronizace.md)
-- [DA - Stažení dat z Redmine](DA%20-%20Stažení%20dat%20z%20Redmine.md)

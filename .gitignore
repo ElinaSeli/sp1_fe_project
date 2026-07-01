@@ -39,3 +39,4 @@ CLAUDE.md
 # Playwright MCP screenshots/snapshots
 .playwright-mcp/
 .screenshots/
+.ai/
